@@ -1,0 +1,16 @@
+---
+groups:
+  - name: PolygonStatus
+    rules:
+
+      - alert: OutdatedIndex
+        expr: |
+          time() -
+            polygon_validators_monitoring_last_processed_block_timestamp_unix >
+          3600
+        labels:
+          severity: high
+        annotations:
+          summary: Index delayed for {{ $value | humanizeDuration }}
+
+# vim: set ts=2 sw=2 ft=yaml:

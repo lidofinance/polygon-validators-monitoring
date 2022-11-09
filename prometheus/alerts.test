@@ -1,0 +1,33 @@
+---
+rule_files:
+  - "alerts.rule"
+evaluation_interval: 1m
+tests:
+  # MissingCheckpoint
+  - interval: 5m
+    input_series:
+      - series: >-
+          polygon_validators_monitoring_missed_checkpoints{moniker="Tank",
+          vid="42", checkpoint="2"}
+        values: _ 1 1 1 _ _ _
+      - series: >-
+          polygon_validators_monitoring_mentions{vid="42", mentions="superman"}
+        values: 1+0x10
+    alert_rule_test:
+      # event should fire
+      - eval_time: 5m
+        alertname: MissingCheckpoint
+        exp_alerts:
+          - exp_labels:
+              severity: high
+              moniker: Tank
+              vid: 42
+              mentions: superman
+              checkpoint: 2
+            exp_annotations:
+              summary: Validator Tank missed checkpoint 2!
+      # should stop
+      - eval_time: 25m
+        alertname: MissingCheckpoint
+
+# vim: set ts=2 sw=2 ft=yaml:

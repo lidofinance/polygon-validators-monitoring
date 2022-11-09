@@ -1,0 +1,22 @@
+---
+rule_files:
+  - "status.rule"
+evaluation_interval: 1m
+tests:
+  # OutdatedIndex
+  - interval: 15m
+    input_series:
+      - series: >-
+          polygon_validators_monitoring_last_processed_block_timestamp_unix
+        values: 0x10
+    alert_rule_test:
+      # event should fire
+      - eval_time: 1h15m
+        alertname: OutdatedIndex
+        exp_alerts:
+          - exp_labels:
+              severity: high
+            exp_annotations:
+              summary: Index delayed for 1h 15m 0s
+
+# vim: set ts=2 sw=2 ft=yaml:

@@ -1,0 +1,24 @@
+---
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - '*.rule'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'bot'
+    static_configs:
+      - targets: ['bot:8080']
+
+    # make status dashboard reusable
+    relabel_configs:
+      - target_label: source
+        replacement: polygon-validators-monitoring
+      - target_label: env
+        replacement: development
+# vim: set ts=2 sw=2:

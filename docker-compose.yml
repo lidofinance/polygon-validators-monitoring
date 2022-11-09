@@ -1,0 +1,63 @@
+---
+version: '3'
+
+services:
+  bot:
+    build: ./
+    environment:
+      - NODE_ENV
+      - PORT
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASS=postgres
+      - DB_NAME=postgres
+      - SENTRY_DSN
+      - EL_API_URLS
+      - LOG_FORMAT=simple
+      - LOG_LEVEL=debug
+      - WORKER_UPDATE_CRON=* * * * *
+      - METRICS_RETENTION_CRON=* * * * *
+      - METRICS_COMPUTE_CRON=* * * * *
+      - STAKE_EVENTS_CRON=* * * * *
+      - MONIKERS_JSON=/app/monikers.json
+      - CHAIN_ID
+      - START_BLOCK
+      - STATS_CHECKPOINTS_DEPTH=200
+      - DRY_RUN
+    ports:
+      - ${PORT}:${PORT}
+    volumes:
+      - ./monikers.json:/app/monikers.json
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:14.4-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - ${DB_PORT}:5432
+
+  grafana:
+    image: grafana/grafana:8.4.6
+    restart: unless-stopped
+    volumes:
+      - ./grafana:/etc/grafana/provisioning
+    ports:
+      - 3000:3000
+
+  prometheus:
+    image: prom/prometheus:v2.35.0
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+# vim: set ts=2 sw=2:

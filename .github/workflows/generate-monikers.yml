@@ -1,0 +1,36 @@
+---
+name: Fetch monikers.json file
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fetch_monikers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: master
+
+      - name: Fetch monikers
+        run: >-
+          curl -sS https://sentinel.matic.network/api/v2/validators\?limit\=0\&sortBy\=id |
+          jq '.result | reduce .[] as $item ({}; . + { ($item.id | tostring): ($item.name |
+          gsub("^\\s+|\\s+$|[^\\x00-\\x7F]+";"")) }) | with_entries(select(.value != ""))'
+          > monikers.json
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v4
+        with:
+          author: GitHub <noreply@github.com>
+          commit-message: 'ci: update monikers.json'
+          branch: monikers/patch
+          title: Update monikers.json
+          body: New monikers fetched

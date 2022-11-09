@@ -1,0 +1,23 @@
+---
+groups:
+  - name: Mentions
+    rules:
+      - record: polygon_validators_monitoring_mentions
+        expr: 1
+        labels:
+          vid: <vid_0>
+          mentions: <user_id_0>
+
+      - record: polygon_validators_monitoring_mentions
+        expr: 1
+        labels:
+          vid: <vid_1>
+          mentions: <user_id_1>
+
+      - record: polygon_validators_monitoring_mentions
+        expr: 2
+        labels:
+          vid: <vid_2>
+          mentions: <user_id_2>
+
+# vim: set ts=2 sw=2 ft=yaml:

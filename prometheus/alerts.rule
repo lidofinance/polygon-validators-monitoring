@@ -1,0 +1,21 @@
+---
+groups:
+  - name: PolygonAlerts
+    rules:
+
+      - alert: MissingCheckpoint
+        expr: >-
+          polygon_validators_monitoring_missed_checkpoints unless
+          polygon_validators_monitoring_missed_checkpoints offset 5m
+        labels:
+          severity: high
+          mentions: >-
+            {{- with printf "polygon_validators_monitoring_mentions{vid=%q}" .Labels.vid | query -}}
+            {{- . | first | label "mentions" -}}
+            {{- end -}}
+        annotations:
+          summary: >-
+            Validator {{ .Labels.moniker }} missed checkpoint {{
+            .Labels.checkpoint }}!
+
+# vim: set ts=2 sw=2 ft=yaml:

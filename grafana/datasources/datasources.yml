@@ -1,0 +1,32 @@
+---
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    uid: Ggj6dYQ7z
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+
+  - name: PostgreSQL
+    type: postgres
+    typeName: PostgreSQL
+    access: proxy
+    url: postgres:5432
+    uid: LOn97bynk
+    user: postgres
+    database: postgres
+    basicAuth: false
+    isDefault: false
+    jsonData:
+      postgresVersion: 1200
+      sslmode: disable
+      tlsAuth: false
+      tlsAuthWithCACert: false
+      tlsConfigurationMethod: file-path
+      tlsSkipVerify: true
+    secureJsonData:
+      password: postgres
+    readOnly: true
+# vim: set ts=2 sw=2 ft=yaml:

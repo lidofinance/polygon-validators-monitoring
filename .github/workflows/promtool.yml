@@ -1,0 +1,37 @@
+name: Prometheus checks
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'prometheus/**'
+
+jobs:
+  promtool:
+    name: Checks via promtool
+
+    runs-on: ubuntu-22.04
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install prometheus
+        run: |
+          sudo apt update &&
+          sudo apt install -y prometheus
+
+      - name: Run configuration check
+        run: promtool check config prometheus/prometheus.yml
+
+      - name: Run rules check
+        run: promtool check rules prometheus/*.rule
+        if: ${{ always() }}
+
+      - name: Run rules tests
+        run: promtool test rules prometheus/*.test
+        if: ${{ always() }}
