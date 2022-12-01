@@ -89,16 +89,6 @@ export class ValidatorsService implements OnModuleInit {
   }
 
   /**
-   * Get validator information by its id
-   */
-  public async getValidatorInfo(
-    id: number,
-    opts: CallOverrides,
-  ): Promise<ValidatorInfo> {
-    return await this.stakeManager.validators(id, opts);
-  }
-
-  /**
    * Check if validator is active at the given epoch
    */
   public isValidator(validator: ValidatorInfo, epoch: BigNumber): boolean {
