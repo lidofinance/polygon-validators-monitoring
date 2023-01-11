@@ -17,3 +17,13 @@ export type Metric<T extends Metrics, S extends string> = T extends 'Gauge'
   : T extends 'Histogram'
   ? client.Histogram<S>
   : never;
+
+export type MetricRegistry = {
+  values: PromMetric[];
+};
+
+export type PromMetric = {
+  labels: {
+    [key: string]: number;
+  };
+};
