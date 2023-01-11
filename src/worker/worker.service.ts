@@ -10,6 +10,7 @@ import { DataSource } from 'typeorm';
 import { CheckpointsService } from 'checkpoints';
 import { ConfigService } from 'common/config';
 import { PrometheusService, TrackTask } from 'common/prometheus';
+import { MetricRegistry } from 'common/prometheus/interfaces';
 import { NewHeaderBlockEvent } from 'contracts/generated/RootChain';
 import { MetricsService } from 'metrics';
 import { ShareEventsService } from 'shareEvents';
@@ -47,7 +48,6 @@ export class WorkerService implements OnModuleInit {
   }
 
   protected lastBlock: Pick<Block, 'hash' | 'number'> | null = null;
-  protected latestIndexedCheckpoint?: Checkpoint = null;
   protected latestBlockNumber?: number = null;
   protected chainId: number;
   protected dryRun: boolean;
@@ -120,6 +120,8 @@ export class WorkerService implements OnModuleInit {
 
       // process checkpoints in the given range by chunks
       let rangeStart = await this.getStartBlockNumber();
+      this.logger.log(`Continue fetching from block ${rangeStart}`);
+
       while (rangeStart <= latestBlock.number) {
         const rangeStop = Math.min(
           rangeStart + BLOCK_HANDLE_CHUNK,
@@ -228,18 +230,22 @@ export class WorkerService implements OnModuleInit {
       this.logger.log('Starting metrics retention job');
 
       // get() method is not provided via index.ts, so we should to use the hack
-      const metrics = await (this.prometheus.missedCheckpoints as any).get();
+      const metrics: MetricRegistry = await (
+        this.prometheus.missedCheckpoints as any
+      ).get();
 
       if (!('values' in metrics)) {
         this.logger.warn('Unable to retrieve prometheus metrics values');
         return;
       }
 
+      const maxCheckpoint = metrics.values.reduce(
+        (max, m) => (m.labels.checkpoint > max ? m.labels.checkpoint : max),
+        0,
+      );
+
       for (const e of metrics.values) {
-        if (
-          this.latestIndexedCheckpoint?.number - e.labels.checkpoint >
-          CHECKPOINTS_TO_KEEP
-        ) {
+        if (maxCheckpoint - e.labels.checkpoint > CHECKPOINTS_TO_KEEP) {
           this.prometheus.missedCheckpoints.remove(e.labels);
 
           this.logger.debug(
@@ -392,10 +398,6 @@ export class WorkerService implements OnModuleInit {
   }
 
   private async getStartBlockNumber(): Promise<number> {
-    if (this.latestIndexedCheckpoint) {
-      return this.latestIndexedCheckpoint.blockNumber + 1;
-    }
-
     if (this.dryRun) {
       this.logger.warn(
         `Select the last ${DRY_RUN_WINDOW} block(s) due to dry run`,
@@ -405,25 +407,18 @@ export class WorkerService implements OnModuleInit {
     }
 
     // resume processing from the last sequential checkpoint block
-    const checkpointToStart =
+    const highestNum =
       await this.checkpoints.getTheHighestSequentialCheckpointNumber();
 
-    if (checkpointToStart !== undefined) {
-      this.latestIndexedCheckpoint =
-        await this.checkpoints.getCheckpointByNumber(checkpointToStart);
-
-      this.logger.log(
-        `The most recent checkpoint in the sequence with number ${this.latestIndexedCheckpoint.number} was found at block ${this.latestIndexedCheckpoint.blockNumber}`,
+    if (highestNum !== undefined) {
+      const checkpointToStart = await this.checkpoints.getCheckpointByNumber(
+        highestNum,
       );
 
-      const blockNumberFromCheckpoint =
-        this.latestIndexedCheckpoint.blockNumber + 1;
-
-      this.logger.log(
-        `Resume fetching from block ${blockNumberFromCheckpoint}`,
+      this.logger.debug(
+        `The most recent checkpoint in the sequence with number ${checkpointToStart.number} was found at block ${checkpointToStart.blockNumber}`,
       );
-
-      return blockNumberFromCheckpoint;
+      return checkpointToStart.blockNumber + 1;
     }
 
     this.logger.debug(
@@ -472,12 +467,9 @@ export class WorkerService implements OnModuleInit {
     const checkpoint = await this.checkpoints.processCheckpointEvent(event);
     await this.checkpoints.storeCheckpoint(checkpoint);
 
-    if (
-      this.latestIndexedCheckpoint === null ||
-      checkpoint.number > this.latestIndexedCheckpoint?.number
-    ) {
-      this.logger.debug(`The latest found checkpoint is ${checkpointNumber}`);
-      this.latestIndexedCheckpoint = checkpoint;
+    if (this.isStaleBlock(checkpoint.blockNumber)) {
+      this.logger.warn('Skipping stale checkpoint metrics update');
+      return checkpoint;
     }
 
     this.exposeMissesForAlerting(checkpoint);
