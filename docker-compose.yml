@@ -23,7 +23,6 @@ services:
       - MONIKERS_JSON=/app/monikers.json
       - CHAIN_ID
       - START_BLOCK
-      - STATS_CHECKPOINTS_DEPTH=200
       - DRY_RUN
     ports:
       - ${PORT}:${PORT}

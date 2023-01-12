@@ -57,12 +57,6 @@ export class EnvironmentVariables {
   START_BLOCK!: number;
 
   @IsOptional()
-  @IsNumber()
-  @Transform(toNumber({ defaultValue: 200 }))
-  // how much checkpoints to take for performance rate calculation
-  STATS_CHECKPOINTS_DEPTH!: number;
-
-  @IsOptional()
   @IsString()
   SENTRY_DSN: string | null = null;
 

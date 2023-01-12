@@ -1,17 +1,22 @@
 import { LOGGER_PROVIDER } from '@lido-nestjs/logger';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 
 import { CheckpointsService } from 'checkpoints';
+import { median } from 'common/helpers';
 import { Checkpoint, Metric } from 'storage/entities';
 
 import {
-  AVG_VALIDATORS_PERF_RATE,
-  TOP_VALIDATORS_PERF_RATE,
-  TRACKED_VALIDATORS_PERF_RATE,
+  MONITORING_PERIOD,
+  VALIDATORS_PERF_BENCHMARK,
+  VALIDATORS_PERF_CMP,
+  VALIDATORS_PERF_INDEX,
 } from './metrics.consts';
-import { AggrValsPerfRate, TrackedValsPerfRate } from './metrics.interfaces';
+import {
+  AggrValsPerfRate,
+  CmpValsPerfRate,
+  TrackedValsPerfRate,
+} from './metrics.interfaces';
 
 type DutiesQueryResult = {
   vId: number;
@@ -20,21 +25,12 @@ type DutiesQueryResult = {
   duties: number;
 };
 
-function computeAvg(rows: DutiesQueryResult[]): number {
-  return (
-    1 -
-    rows.reduce((s, r) => s + Number(r.misses), 0) /
-      rows.reduce((s, r) => s + Number(r.duties), 0)
-  );
-}
-
 @Injectable()
 export class MetricsService {
   public constructor(
     @Inject(LOGGER_PROVIDER) protected readonly logger: LoggerService,
 
     protected readonly checkpoints: CheckpointsService,
-    protected readonly configService: ConfigService,
     protected readonly dataSource: DataSource,
   ) {}
 
@@ -46,8 +42,6 @@ export class MetricsService {
       `Compute performance metrics for checkpoint ${checkpoint.number}`,
     );
 
-    const offset = this.configService.get('STATS_CHECKPOINTS_DEPTH') - 1;
-
     const rows: DutiesQueryResult[] = await this.dataSource.manager.query(
       `select "vId", moniker,
           sum(case when fulfilled = false then 1 else 0 end) as misses,
@@ -56,50 +50,69 @@ export class MetricsService {
       where t."checkpointNumber" between $1::integer and $2::integer
       group by 1,2;
     `,
-      [checkpoint.number - offset, checkpoint.number],
+      [checkpoint.number - MONITORING_PERIOD, checkpoint.number],
     );
 
     const trackedIds = checkpoint.duties
       .filter((d) => d.isTracked)
       .map((d) => d.vId);
 
-    const top10Ids = checkpoint.duties.filter((d) => d.isTop).map((d) => d.vId);
-
     const ratesOfTracked = rows
       .filter((r) => trackedIds.includes(r.vId))
       .map((r) => {
         const m = new Metric() as TrackedValsPerfRate;
-        m.name = TRACKED_VALIDATORS_PERF_RATE;
+        m.name = VALIDATORS_PERF_INDEX;
         m.blockTimestamp = checkpoint.blockTimestamp;
         m.labels = {
           moniker: r.moniker,
           vId: String(r.vId),
         };
-        m.value = 1 - Number(r.misses / r.duties);
+        m.value = this.perfPercent(r);
         return m;
       });
 
+    const perfBench = this.computePB(rows, checkpoint.number);
+
     const avgPerfMetric = new Metric() as AggrValsPerfRate;
-    avgPerfMetric.name = AVG_VALIDATORS_PERF_RATE;
+    avgPerfMetric.name = VALIDATORS_PERF_BENCHMARK;
     avgPerfMetric.blockTimestamp = checkpoint.blockTimestamp;
     avgPerfMetric.labels = {};
-    avgPerfMetric.value = computeAvg(
-      rows.filter((r) => !trackedIds.includes(r.vId)),
-    );
+    avgPerfMetric.value = perfBench;
 
-    const topPerfMetric = new Metric() as AggrValsPerfRate;
-    topPerfMetric.name = TOP_VALIDATORS_PERF_RATE;
-    topPerfMetric.blockTimestamp = checkpoint.blockTimestamp;
-    topPerfMetric.labels = {};
-    topPerfMetric.value = computeAvg(
-      rows.filter((r) => top10Ids.includes(r.vId)),
-    );
+    const cmpPerfIdxs = ratesOfTracked.map((o) => {
+      const m = new Metric() as CmpValsPerfRate;
+      m.name = VALIDATORS_PERF_CMP;
+      m.blockTimestamp = checkpoint.blockTimestamp;
+      m.labels = o.labels;
+      m.value = o.value - perfBench;
+      return m;
+    });
 
     await this.dataSource.manager.save([
       ...ratesOfTracked,
+      ...cmpPerfIdxs,
       avgPerfMetric,
-      topPerfMetric,
     ]);
+  }
+
+  private computePB(rows: DutiesQueryResult[], checkpointNum: number): number {
+    const m = median(rows.reduce((p, c) => p.concat(this.perfPercent(c)), []));
+    return m * this.getPerformanceMultiple(checkpointNum);
+  }
+
+  private perfPercent(row: DutiesQueryResult): number {
+    return 1 - row.misses / row.duties;
+  }
+
+  /**
+   * Return median value multiplier as defined in PIP-4
+   */
+  private getPerformanceMultiple(checkpointNum: number): number {
+    // TODO: identify starting checkpoint
+    if (checkpointNum < 100_500) {
+      return 0.95;
+    }
+    return 0.98;
   }
 
   public async getCheckpointsNumbersToProcess(
@@ -133,5 +146,30 @@ export class MetricsService {
         [maxCheckpointNum, limit],
       )
     ).map((r: { number: number }) => r.number);
+  }
+
+  /**
+   *  Return performance benchmark comparison metrics for the given depth
+   */
+  public async getPBCmpVals(
+    maxCheckpointNum: number,
+    depth: number,
+  ): Promise<CmpValsPerfRate[]> {
+    return (await this.dataSource.query(
+      `select
+         m.*
+       from
+         metrics m
+         inner join checkpoints c on (m."blockTimestamp" = c."blockTimestamp")
+       where
+         m."name" = '${VALIDATORS_PERF_CMP}'
+         and c."number" between $1::integer
+         and $2::integer
+       order by
+         m."blockTimestamp"
+       desc;
+      `,
+      [maxCheckpointNum - depth, maxCheckpointNum],
+    )) as CmpValsPerfRate[];
   }
 }

@@ -215,6 +215,13 @@ export class CheckpointsService {
   }
 
   /**
+   * Get the last checkpoint
+   */
+  public async getLastCheckpoint(): Promise<Checkpoint | null> {
+    return this.getOneInOrder('desc');
+  }
+
+  /**
    * Get the one checkpoint from the selected end (last / first)
    */
   public async getOneInOrder(

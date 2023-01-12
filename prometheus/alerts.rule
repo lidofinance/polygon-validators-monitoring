@@ -18,4 +18,34 @@ groups:
             Validator {{ .Labels.moniker }} missed checkpoint {{
             .Labels.checkpoint }}!
 
+      - alert: ValidatorInGP
+        expr: >-
+          0 < polygon_validators_monitoring_under_pb_strike < 700
+        labels:
+          severity: high
+          level: GP1
+        annotations:
+          summary: Validator {{ .Labels.moniker }} is in Grace Period 1!
+
+      - alert: ValidatorInGP
+        expr: >-
+          700 <= polygon_validators_monitoring_under_pb_strike < 1400
+        labels:
+          severity: high
+          level: GP2
+        annotations:
+          summary: Validator {{ .Labels.moniker }} is in Grace Period 2!
+
+      - alert: ValidatorInGP
+        # we don't want to fire for possibly unstaked validators anymore so set
+        # upper bound after one more monitoring period
+        expr: 1400 <= polygon_validators_monitoring_under_pb_strike < 2100
+        labels:
+          severity: high
+          level: FN
+        annotations:
+          summary: >-
+            Validator {{ .Labels.moniker }} has received Final Notice
+            and will be unstaked soon.
+
 # vim: set ts=2 sw=2 ft=yaml:
