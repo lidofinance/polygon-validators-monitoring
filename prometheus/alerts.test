@@ -30,4 +30,47 @@ tests:
       - eval_time: 25m
         alertname: MissingCheckpoint
 
+  # ValidatorInGP
+  - interval: 5m
+    input_series:
+      - series: >-
+          polygon_validators_monitoring_under_pb_strike{moniker="Tank"}
+        values: 0 1 700+700x2
+    alert_rule_test:
+      # GP1
+      - eval_time: 5m
+        alertname: ValidatorInGP
+        exp_alerts:
+          - exp_labels:
+              severity: high
+              moniker: Tank
+              level: GP1
+            exp_annotations:
+              summary: Validator Tank is in Grace Period 1!
+      # GP2
+      - eval_time: 10m
+        alertname: ValidatorInGP
+        exp_alerts:
+          - exp_labels:
+              severity: high
+              moniker: Tank
+              level: GP2
+            exp_annotations:
+              summary: Validator Tank is in Grace Period 2!
+      # FN
+      - eval_time: 15m
+        alertname: ValidatorInGP
+        exp_alerts:
+          - exp_labels:
+              severity: high
+              moniker: Tank
+              level: FN
+            exp_annotations:
+              summary: >-
+                Validator Tank has received Final Notice
+                and will be unstaked soon.
+      # should stop
+      - eval_time: 20m
+        alertname: ValidatorInGP
+
 # vim: set ts=2 sw=2 ft=yaml:

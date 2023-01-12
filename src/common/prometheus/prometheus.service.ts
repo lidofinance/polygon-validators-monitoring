@@ -59,6 +59,12 @@ export class PrometheusService {
     buckets: [0.1, 0.2, 0.5, 1, 2, 5, 10],
     labelNames: ['name', 'status'],
   });
+
+  public underPBStrike = this.getOrCreateMetric('Gauge', {
+    name: 'under_pb_strike',
+    help: 'Count of checkpoints under Performance Benchmark in the row',
+    labelNames: ['vid', 'moniker'],
+  });
 }
 
 export function TrackTask(name: string) {
