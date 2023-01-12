@@ -1320,7 +1320,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "TOP"
+              "options": "PB"
             },
             "properties": [
               {
@@ -1346,7 +1346,11 @@
               },
               {
                 "id": "displayName",
-                "value": "AVG over top 10"
+                "value": "Performance Benchmark"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 15
               }
             ]
           },
@@ -1421,8 +1425,7 @@
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull",
-            "mean"
+            "lastNotNull"
           ],
           "displayMode": "table",
           "placement": "right",
@@ -1445,8 +1448,26 @@
           "group": [],
           "metricColumn": "label",
           "rawQuery": true,
-          "rawSql": "SELECT\n  \"blockTimestamp\" AS \"time\",\n  labels ->> 'moniker' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'tracked_vals_perf_rate'\nORDER BY 1,2;",
-          "refId": "A"
+          "rawSql": "SELECT\n  \"blockTimestamp\" AS \"time\",\n  labels ->> 'moniker' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_idx'\nORDER BY 1,2;",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
         },
         {
           "datasource": {
@@ -1458,24 +1479,29 @@
           "hide": false,
           "metricColumn": "label",
           "rawQuery": true,
-          "rawSql": "SELECT\n  \"blockTimestamp\" AS \"time\",\n  'AVG' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'avg_vals_perf_rate'\nORDER BY 1;",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "LOn97bynk"
-          },
-          "format": "time_series",
-          "group": [],
-          "hide": false,
-          "metricColumn": "label",
-          "rawQuery": true,
-          "rawSql": "SELECT\n  \"blockTimestamp\" AS \"time\",\n  'TOP' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'top_vals_perf_rate'\nORDER BY 1;",
-          "refId": "C"
+          "rawSql": "SELECT\n  \"blockTimestamp\" AS \"time\",\n  'PB' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_benchmark'\nORDER BY 1;",
+          "refId": "C",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
         }
       ],
-      "title": "Validators uptime",
+      "title": "Validators performance",
       "transformations": [],
       "type": "timeseries"
     },

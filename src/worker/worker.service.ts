@@ -9,10 +9,11 @@ import { DataSource } from 'typeorm';
 
 import { CheckpointsService } from 'checkpoints';
 import { ConfigService } from 'common/config';
+import { takeWhile } from 'common/helpers';
 import { PrometheusService, TrackTask } from 'common/prometheus';
 import { MetricRegistry } from 'common/prometheus/interfaces';
 import { NewHeaderBlockEvent } from 'contracts/generated/RootChain';
-import { MetricsService } from 'metrics';
+import { MONITORING_PERIOD, MetricsService } from 'metrics';
 import { ShareEventsService } from 'shareEvents';
 import { Checkpoint, Duty, Metric, ShareEvent } from 'storage/entities';
 import { ValidatorsService } from 'validators';
@@ -28,6 +29,7 @@ import {
   METRICS_RETENTION_JOB_NAME,
   SECS_PER_BLOCK,
   STAKE_EVENTS_JOB_NAME,
+  STALE_CHECKPOINT_THRESHOLD,
 } from './worker.consts';
 
 export class WorkerService implements OnModuleInit {
@@ -72,6 +74,7 @@ export class WorkerService implements OnModuleInit {
    */
   public async onModuleInit(): Promise<void> {
     await this.syncMonikers({ force: true });
+    await this.initMetrics();
 
     const jobs = [
       this.scheduleJob(
@@ -286,6 +289,13 @@ export class WorkerService implements OnModuleInit {
 
       await Promise.all(jobs);
 
+      const lastCheckpoint = await this.checkpoints.getCheckpointByNumber(
+        eCheckpointNum,
+      );
+      if (lastCheckpoint && !this.isStaleCheckpoint(lastCheckpoint)) {
+        this.exposeUnderPerfStrike(lastCheckpoint);
+      }
+
       this.logger.log('Metrics computation complete');
     } catch (err) {
       this.logger.error('Unable to complete performance metrics computation');
@@ -349,16 +359,19 @@ export class WorkerService implements OnModuleInit {
   private isStaleBlock(blockNumber: number): boolean {
     if (!this.latestBlockNumber) return false;
 
-    const range = this.latestBlockNumber - blockNumber;
-    const delta = range * SECS_PER_BLOCK;
+    return (
+      this.latestBlockNumber - blockNumber * SECS_PER_BLOCK >
+      MAX_EXPECTED_BLOCK_FREQUENCY_SECONDS
+    );
+  }
 
-    if (delta > MAX_EXPECTED_BLOCK_FREQUENCY_SECONDS) {
-      this.logger.warn(`Block ${blockNumber} is too old`);
-
-      return true;
-    }
-
-    return false;
+  /**
+   * Check if the given checkpoint is stale
+   */
+  private isStaleCheckpoint(checkpoint: Checkpoint): boolean {
+    return (
+      Date.now() / 1000 - checkpoint.blockTimestamp > STALE_CHECKPOINT_THRESHOLD
+    );
   }
 
   /**
@@ -428,25 +441,6 @@ export class WorkerService implements OnModuleInit {
     return this.configService.get('START_BLOCK');
   }
 
-  private exposeMissesForAlerting(checkpoint: Checkpoint): void {
-    if (this.isStaleBlock(checkpoint.blockNumber)) {
-      this.logger.warn('Skipping stale checkpoint metrics update');
-      return;
-    }
-
-    const misses = checkpoint.duties.filter((d) => d.isTracked && !d.fulfilled);
-
-    for (const miss of misses) {
-      this.logger.debug(
-        `Checkpoint ${checkpoint.number} skipped by ${miss.moniker}`,
-      );
-
-      this.prometheus.missedCheckpoints
-        .labels(miss.vId.toString(), miss.moniker, checkpoint.number.toString())
-        .inc();
-    }
-  }
-
   private async handleCheckpointEvent(
     event: NewHeaderBlockEvent,
   ): Promise<Checkpoint> {
@@ -467,12 +461,11 @@ export class WorkerService implements OnModuleInit {
     const checkpoint = await this.checkpoints.processCheckpointEvent(event);
     await this.checkpoints.storeCheckpoint(checkpoint);
 
-    if (this.isStaleBlock(checkpoint.blockNumber)) {
+    if (!this.isStaleCheckpoint(checkpoint)) {
+      this.exposeCheckpointMisses(checkpoint);
+    } else {
       this.logger.warn('Skipping stale checkpoint metrics update');
-      return checkpoint;
     }
-
-    this.exposeMissesForAlerting(checkpoint);
 
     return checkpoint;
   }
@@ -500,7 +493,7 @@ export class WorkerService implements OnModuleInit {
   private async handleBlocksRange(
     fromBlock: number,
     toBlock: number,
-  ): Promise<void> {
+  ): Promise<Checkpoint[]> {
     const events = await this.checkpoints.getCheckpointEvents(
       fromBlock,
       toBlock,
@@ -511,8 +504,73 @@ export class WorkerService implements OnModuleInit {
       events.sort((a, b) => a.blockNumber - b.blockNumber),
     );
 
-    await Promise.all(
+    return Promise.all(
       events.map(async (e) => await this.handleCheckpointEvent(e)),
     );
+  }
+
+  private async initMetrics(): Promise<void> {
+    this.logger.log('Initializing metrics');
+
+    try {
+      const lastCheckpoint = await this.checkpoints.getLastCheckpoint();
+      if (lastCheckpoint && !this.isStaleCheckpoint(lastCheckpoint)) {
+        await this.exposeUnderPerfStrike(lastCheckpoint);
+      }
+    } catch (err) {
+      this.logger.error('Unable to initialize metrics');
+      this.logger.error(err);
+      return err;
+    }
+
+    this.logger.log('Metrics initialized');
+  }
+
+  /**
+   * Expose metric of missed checkpoint by the validators
+   */
+  private exposeCheckpointMisses(checkpoint: Checkpoint): void {
+    const misses = checkpoint.duties.filter((d) => d.isTracked && !d.fulfilled);
+
+    for (const miss of misses) {
+      this.logger.debug(
+        `Checkpoint ${checkpoint.number} skipped by ${miss.moniker}`,
+      );
+
+      this.prometheus.missedCheckpoints
+        .labels(miss.vId.toString(), miss.moniker, checkpoint.number.toString())
+        .inc();
+    }
+  }
+
+  /**
+   * Expose metric of checkpoints under PB in the row for the given validator
+   */
+  private async exposeUnderPerfStrike(checkpoint: Checkpoint): Promise<void> {
+    const trackedVals = checkpoint.duties
+      .filter((d) => d.isTracked)
+      .map((d) => {
+        return {
+          vId: d.vId,
+          moniker: d.moniker,
+        };
+      });
+
+    const values = await this.metrics.getPBCmpVals(
+      checkpoint.number,
+      MONITORING_PERIOD * 3, // GP1 - 0, GP2, FN, and the upper bound
+    );
+
+    const buf = Object.fromEntries(trackedVals.map((o) => [o.vId, []]));
+    for (const metric of values) {
+      buf[metric.labels.vId].push(metric.value); // sorted by timestamp list of comparison results
+    }
+
+    for (const v of trackedVals) {
+      const s = takeWhile(buf[v.vId], (o: number) => o < 0).length;
+      this.prometheus.underPBStrike
+        .labels({ vid: v.vId.toString(), moniker: v.moniker })
+        .set(s);
+    }
   }
 }

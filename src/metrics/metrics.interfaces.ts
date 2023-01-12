@@ -8,5 +8,7 @@ export type TrackedValsPerfRate = Metric & {
 };
 
 export type AggrValsPerfRate = Metric & {
-  labels: Record<string, never>;
+  labels: { [k: string]: never };
 };
+
+export type CmpValsPerfRate = Metric & TrackedValsPerfRate;

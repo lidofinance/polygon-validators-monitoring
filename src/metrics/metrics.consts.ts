@@ -1,4 +1,5 @@
-export const TRACKED_VALIDATORS_PERF_RATE = 'tracked_vals_perf_rate';
+export const VALIDATORS_PERF_BENCHMARK = 'vals_perf_benchmark';
+export const VALIDATORS_PERF_INDEX = 'vals_perf_idx';
+export const VALIDATORS_PERF_CMP = 'vals_perf_cmp';
 
-export const TOP_VALIDATORS_PERF_RATE = 'top_vals_perf_rate';
-export const AVG_VALIDATORS_PERF_RATE = 'avg_vals_perf_rate';
+export const MONITORING_PERIOD = 700; // count of checkpoints to measure the performance
