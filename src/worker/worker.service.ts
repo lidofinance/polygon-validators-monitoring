@@ -10,6 +10,7 @@ import { DataSource } from 'typeorm';
 import { CheckpointsService } from 'checkpoints';
 import { ConfigService } from 'common/config';
 import { takeWhile } from 'common/helpers';
+import { allSettled } from 'common/helpers/promises';
 import { PrometheusService, TrackTask } from 'common/prometheus';
 import { MetricRegistry } from 'common/prometheus/interfaces';
 import { NewHeaderBlockEvent } from 'contracts/generated/RootChain';
@@ -25,7 +26,6 @@ import {
   MAIN_JOB_NAME,
   MAX_EXPECTED_BLOCK_FREQUENCY_SECONDS,
   METRICS_COMPUTE_BATCH_SIZE,
-  METRICS_COMPUTE_JOB_NAME,
   METRICS_RETENTION_JOB_NAME,
   SECS_PER_BLOCK,
   STAKE_EVENTS_JOB_NAME,
@@ -54,11 +54,38 @@ export class WorkerService implements OnModuleInit {
   protected chainId: number;
   protected dryRun: boolean;
 
-  protected async scheduleJob(
+  /**
+   * Initializes the main update cycle
+   */
+  public async onModuleInit(): Promise<void> {
+    await this.syncMonikers({ force: true });
+
+    this.scheduleJob(
+      MAIN_JOB_NAME,
+      this.configService.get('WORKER_UPDATE_CRON'),
+      async () => await this.runMainUpdateCycle(),
+    );
+    this.scheduleJob(
+      STAKE_EVENTS_JOB_NAME,
+      this.configService.get('STAKE_EVENTS_CRON'),
+      async () => await this.stakeEvents(),
+    );
+
+    // no need in metrics retention in dry run
+    if (!this.dryRun) {
+      this.scheduleJob(
+        METRICS_RETENTION_JOB_NAME,
+        this.configService.get('METRICS_RETENTION_CRON'),
+        async () => await this.metricsRetention(),
+      );
+    }
+  }
+
+  protected scheduleJob(
     name: string,
     interval: string,
     cb: CronCommand,
-  ): Promise<CronJob> {
+  ): CronJob {
     const job = new CronJob(interval, cb);
 
     this.schedulerRegistry.addCronJob(name, job);
@@ -70,51 +97,13 @@ export class WorkerService implements OnModuleInit {
   }
 
   /**
-   * Initializes the main update cycle
-   */
-  public async onModuleInit(): Promise<void> {
-    await this.syncMonikers({ force: true });
-    await this.initMetrics();
-
-    const jobs = [
-      this.scheduleJob(
-        MAIN_JOB_NAME,
-        this.configService.get('WORKER_UPDATE_CRON'),
-        async () => await this.runMainUpdateCycle(),
-      ),
-      this.scheduleJob(
-        STAKE_EVENTS_JOB_NAME,
-        this.configService.get('STAKE_EVENTS_CRON'),
-        async () => await this.stakeEvents(),
-      ),
-      this.scheduleJob(
-        METRICS_COMPUTE_JOB_NAME,
-        this.configService.get('METRICS_COMPUTE_CRON'),
-        async () => await this.computeMetrics(),
-      ),
-    ];
-
-    // no need in metrics retention in dry run
-    if (!this.dryRun) {
-      jobs.push(
-        this.scheduleJob(
-          METRICS_RETENTION_JOB_NAME,
-          this.configService.get('METRICS_RETENTION_CRON'),
-          async () => await this.metricsRetention(),
-        ),
-      );
-    }
-
-    await Promise.all(jobs);
-  }
-
-  /**
    * Runs update cycle
    */
   @OneAtTime()
   @TrackTask(MAIN_JOB_NAME)
   protected async runMainUpdateCycle(): Promise<Error | undefined> {
     try {
+      this.logger.log('Starting main update cycle');
       // retrieve the latest block from ethereum
       const latestBlock = await this.provider.getBlock('latest');
       if (!this.isNewBlock(latestBlock)) return;
@@ -148,9 +137,16 @@ export class WorkerService implements OnModuleInit {
         rangeStart = rangeStop;
       }
 
-      this.logger.log('End blocks fetch cycle');
+      await this.computeMetrics();
+
+      const lastCheckpoint = await this.checkpoints.getLastCheckpoint();
+      if (lastCheckpoint && !this.isStaleCheckpoint(lastCheckpoint)) {
+        await this.exposeUnderPerfStrike(lastCheckpoint);
+      }
+
+      this.logger.log("End block's fetch cycle");
     } catch (error) {
-      this.logger.warn('Block fetch cycle terminated with an error');
+      this.logger.warn("Block's fetch cycle terminated with an error");
       this.logger.error(error);
       return error;
     } finally {
@@ -176,7 +172,7 @@ export class WorkerService implements OnModuleInit {
         seekStakeEventsFrom = lastStakeEvent.blockNumber + 1;
       }
 
-      const stakeEventsPromise = this.shareEvents.getStakeEvents(
+      const stakeEvents = await this.shareEvents.getStakeEvents(
         seekStakeEventsFrom,
         latestBlock.number,
       );
@@ -189,20 +185,15 @@ export class WorkerService implements OnModuleInit {
         seekUnstakeEventsFrom = lastUnstakeEvent.blockNumber + 1;
       }
 
-      const unstakeEventsPromise = this.shareEvents.getUnstakeEvents(
+      const unstakeEvents = await this.shareEvents.getUnstakeEvents(
         seekUnstakeEventsFrom,
         latestBlock.number,
       );
 
       // ---
 
-      const events = await Promise.all([
-        unstakeEventsPromise,
-        stakeEventsPromise,
-      ]);
-
-      await Promise.all(
-        events.flat().map(async (event) => {
+      await allSettled(
+        [stakeEvents, unstakeEvents].flat().map(async (event) => {
           const change = await this.shareEvents.processShareEvent(event);
           await this.shareEvents.storeEvent(change);
         }),
@@ -267,15 +258,16 @@ export class WorkerService implements OnModuleInit {
     }
   }
 
-  @OneAtTime()
-  @TrackTask(METRICS_COMPUTE_JOB_NAME)
   private async computeMetrics() {
-    try {
-      this.logger.log('Staring metrics computation');
+    this.logger.log('Staring metrics computation');
 
-      const eCheckpointNum =
-        await this.checkpoints.getTheHighestSequentialCheckpointNumber();
-      const nums = await this.metrics.getCheckpointsNumbersToProcess(
+    const eCheckpointNum =
+      await this.checkpoints.getTheHighestSequentialCheckpointNumber();
+
+    let nums = []; // checkpoints numbers to process
+
+    do {
+      nums = await this.metrics.getCheckpointsNumbersToProcess(
         eCheckpointNum,
         METRICS_COMPUTE_BATCH_SIZE,
       );
@@ -287,21 +279,10 @@ export class WorkerService implements OnModuleInit {
         await this.metrics.computePerformance(checkpoint);
       });
 
-      await Promise.all(jobs);
+      await allSettled(jobs);
+    } while (nums.length > 0);
 
-      const lastCheckpoint = await this.checkpoints.getCheckpointByNumber(
-        eCheckpointNum,
-      );
-      if (lastCheckpoint && !this.isStaleCheckpoint(lastCheckpoint)) {
-        this.exposeUnderPerfStrike(lastCheckpoint);
-      }
-
-      this.logger.log('Metrics computation complete');
-    } catch (err) {
-      this.logger.error('Unable to complete performance metrics computation');
-      this.logger.error(err);
-      return err;
-    }
+    this.logger.log('Metrics computation complete');
   }
 
   @OneAtTime()
@@ -342,7 +323,7 @@ export class WorkerService implements OnModuleInit {
           .execute();
       });
 
-      await Promise.all(upds);
+      await allSettled(upds);
     } catch (err) {
       this.logger.error('Unable to update monikers');
       this.logger.error(err);
@@ -504,26 +485,10 @@ export class WorkerService implements OnModuleInit {
       events.sort((a, b) => a.blockNumber - b.blockNumber),
     );
 
-    return Promise.all(
-      events.map(async (e) => await this.handleCheckpointEvent(e)),
+    const checkpoints = await allSettled(
+      events.map((e) => this.handleCheckpointEvent(e)),
     );
-  }
-
-  private async initMetrics(): Promise<void> {
-    this.logger.log('Initializing metrics');
-
-    try {
-      const lastCheckpoint = await this.checkpoints.getLastCheckpoint();
-      if (lastCheckpoint && !this.isStaleCheckpoint(lastCheckpoint)) {
-        await this.exposeUnderPerfStrike(lastCheckpoint);
-      }
-    } catch (err) {
-      this.logger.error('Unable to initialize metrics');
-      this.logger.error(err);
-      return err;
-    }
-
-    this.logger.log('Metrics initialized');
+    return checkpoints;
   }
 
   /**
