@@ -176,7 +176,7 @@ export class ValidatorsService implements OnModuleInit {
   public async getActiveLidoValidatorsIds(
     opts: CallOverrides,
   ): Promise<number[]> {
-    const ids = isPoLidoV1(this.nodeOperatorsRegistryV1, opts)
+    const ids = (await isPoLidoV1(this.nodeOperatorsRegistryV1, opts))
       ? await this.getActiveLidoValidatorsIdsV1(opts)
       : await this.getActiveLidoValidatorsIdsV2(opts);
 
