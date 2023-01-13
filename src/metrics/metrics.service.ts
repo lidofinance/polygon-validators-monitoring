@@ -108,8 +108,7 @@ export class MetricsService {
    * Return median value multiplier as defined in PIP-4
    */
   private getPerformanceMultiple(checkpointNum: number): number {
-    // TODO: identify starting checkpoint
-    if (checkpointNum < 100_500) {
+    if (checkpointNum < 42_943) {
       return 0.95;
     }
     return 0.98;
