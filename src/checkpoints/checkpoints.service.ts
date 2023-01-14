@@ -104,7 +104,7 @@ export class CheckpointsService {
     const checkpointNumber = this.getCheckpointNumberFromEvent(event);
 
     this.logger.log(
-      `Read checkpoint ${checkpointNumber} at block ${event.blockNumber}`,
+      `Processing checkpoint ${checkpointNumber} from block ${event.blockNumber}`,
     );
 
     const checkpoint = new Checkpoint();
@@ -124,30 +124,14 @@ export class CheckpointsService {
     const opts = { blockTag: event.blockNumber };
 
     const [trackedIds, activeSet] = await Promise.all([
-      await this.validators.getTrackedValidatorsIds(opts),
-      await this.validators.getValidatorsActiveSet(opts),
+      this.validators.getTrackedValidatorsIds(opts),
+      this.validators.getValidatorsActiveSet(opts),
     ]);
 
     const commited = await Promise.all(
-      signers.map(
-        async (signer) =>
-          await this.validators.signerToValidatorId(signer, opts),
+      signers.map((signer) =>
+        this.validators.signerToValidatorId(signer, opts),
       ),
-    );
-
-    // I believe there should be `cmp` method on BigNumber, but it lacks;
-    // sort in descending order
-    const top10ids = activeSet
-      .sort((a, b) =>
-        a.amount.add(a.delegatedAmount).gt(b.amount.add(b.delegatedAmount))
-          ? -1
-          : 1,
-      )
-      .map((v) => v.id)
-      .slice(0, 10);
-
-    this.logger.debug(
-      `Top 10 validators ids: [${top10ids}] at block ${event.blockNumber}`,
     );
 
     for (const v of activeSet) {
@@ -159,7 +143,6 @@ export class CheckpointsService {
       duty.moniker = this.validators.getMoniker(v.id);
       duty.blockTimestamp = checkpoint.blockTimestamp;
       duty.isTracked = trackedIds.includes(v.id);
-      duty.isTop = top10ids.includes(v.id);
 
       checkpoint.duties.push(duty);
     }

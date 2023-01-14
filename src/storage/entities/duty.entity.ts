@@ -36,7 +36,4 @@ export class Duty {
 
   @Column({ type: 'boolean' })
   isTracked!: boolean;
-
-  @Column({ type: 'boolean' })
-  isTop!: boolean;
 }

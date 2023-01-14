@@ -7,6 +7,7 @@ export class purgeMetrics1673430300872 implements MigrationInterface {
     await queryRunner.clearTable('metrics');
   }
 
+  // eslint-disable-next-line
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Nothing to do
   }
