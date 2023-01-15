@@ -22,13 +22,21 @@ async function bootstrap() {
   const sentryDsn = configService.get('SENTRY_DSN') ?? undefined;
 
   // logger
-  app.useLogger(app.get(LOGGER_PROVIDER));
+  const logger = app.get(LOGGER_PROVIDER);
+  app.useLogger(logger);
 
   // sentry
   if (sentryDsn) {
     const release = `${APP_NAME}@${buildInfo.version}`;
     Sentry.init({ dsn: sentryDsn, release, environment });
   }
+
+  process.on('unhandledRejection', async (error: any) => {
+    logger.warn(
+      "Dangling promise rejection detected. It's not handled anywhere.",
+    );
+    logger.warn(error);
+  });
 
   // app
   await app.listen(appPort, '0.0.0.0');
