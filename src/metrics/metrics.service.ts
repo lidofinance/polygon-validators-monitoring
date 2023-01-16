@@ -3,14 +3,16 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
 import { CheckpointsService } from 'checkpoints';
-import { median } from 'common/helpers';
+import { mean, median } from 'common/helpers';
 import { Checkpoint, Metric } from 'storage/entities';
 
 import {
   MONITORING_PERIOD,
+  VALIDATORS_PERF_AVG_RATE,
   VALIDATORS_PERF_BENCHMARK,
   VALIDATORS_PERF_CMP,
   VALIDATORS_PERF_INDEX,
+  VALIDATORS_PERF_TOP_RATE,
 } from './metrics.consts';
 import {
   AggrValsPerfRate,
@@ -73,11 +75,29 @@ export class MetricsService {
 
     const perfBench = this.computePB(rows, checkpoint.number);
 
+    const perfBenchMetric = new Metric() as AggrValsPerfRate;
+    perfBenchMetric.name = VALIDATORS_PERF_BENCHMARK;
+    perfBenchMetric.blockTimestamp = checkpoint.blockTimestamp;
+    perfBenchMetric.labels = {};
+    perfBenchMetric.value = perfBench;
+
     const avgPerfMetric = new Metric() as AggrValsPerfRate;
-    avgPerfMetric.name = VALIDATORS_PERF_BENCHMARK;
+    avgPerfMetric.name = VALIDATORS_PERF_AVG_RATE;
     avgPerfMetric.blockTimestamp = checkpoint.blockTimestamp;
     avgPerfMetric.labels = {};
-    avgPerfMetric.value = perfBench;
+    avgPerfMetric.value = mean(...rows.map((r) => this.perfPercent(r)));
+
+    const top10Ids = checkpoint.duties.filter((d) => d.isTop).map((d) => d.vId);
+
+    const topPerfMetric = new Metric() as AggrValsPerfRate;
+    topPerfMetric.name = VALIDATORS_PERF_TOP_RATE;
+    topPerfMetric.blockTimestamp = checkpoint.blockTimestamp;
+    topPerfMetric.labels = {};
+    topPerfMetric.value = mean(
+      ...rows
+        .filter((r) => top10Ids.includes(r.vId))
+        .map((r) => this.perfPercent(r)),
+    );
 
     const cmpPerfIdxs = ratesOfTracked.map((o) => {
       const m = new Metric() as CmpValsPerfRate;
@@ -89,9 +109,11 @@ export class MetricsService {
     });
 
     await this.dataSource.manager.save([
+      perfBenchMetric,
+      avgPerfMetric,
+      topPerfMetric,
       ...ratesOfTracked,
       ...cmpPerfIdxs,
-      avgPerfMetric,
     ]);
   }
 

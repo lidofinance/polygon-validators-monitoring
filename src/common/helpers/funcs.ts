@@ -15,16 +15,16 @@ export function median(numArray: number[]): number {
   }
 }
 
+export function mean(...nums: number[]): number {
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
 function isEven(num: number): boolean {
   return num % 2 == 0;
 }
 
 function toInt(num: number): number {
   return num | 0;
-}
-
-function mean(...nums: number[]): number {
-  return nums.reduce((a, b) => a + b, 0) / nums.length;
 }
 
 // TODO: type for predicate p
