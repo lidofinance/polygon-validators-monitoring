@@ -1295,7 +1295,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": false,
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1351,6 +1351,13 @@
               {
                 "id": "custom.fillOpacity",
                 "value": 15
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
               }
             ]
           },
@@ -1393,30 +1400,34 @@
           },
           {
             "matcher": {
-              "id": "byFrameRefID",
-              "options": "A"
+              "id": "byName",
+              "options": "TOP"
             },
             "properties": [
               {
-                "id": "mappings",
-                "value": [
-                  {
-                    "options": {
-                      "54": {
-                        "index": 0,
-                        "text": "Shard Labs"
-                      }
-                    },
-                    "type": "value"
-                  }
-                ]
+                "id": "displayName",
+                "value": "AVG over top 10"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 8,
+        "h": 12,
         "w": 24,
         "x": 0,
         "y": 16
@@ -1448,8 +1459,8 @@
           "group": [],
           "metricColumn": "label",
           "rawQuery": true,
-          "rawSql": "SELECT\n  \"blockTimestamp\" AS \"time\",\n  labels ->> 'moniker' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_idx'\nORDER BY 1,2;",
-          "refId": "A",
+          "rawSql": "SELECT\n  $__unixEpochGroup(\"blockTimestamp\", $__interval) as \"time\",\n  labels ->> 'moniker' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_idx'\nORDER BY 1,2;",
+          "refId": "Tracked validators perf rates",
           "select": [
             [
               {
@@ -1479,8 +1490,70 @@
           "hide": false,
           "metricColumn": "label",
           "rawQuery": true,
-          "rawSql": "SELECT\n  \"blockTimestamp\" AS \"time\",\n  'PB' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_benchmark'\nORDER BY 1;",
-          "refId": "C",
+          "rawSql": "SELECT\n  $__unixEpochGroup(\"blockTimestamp\", $__interval) as \"time\",\n  'PB' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_benchmark'\nORDER BY 1;",
+          "refId": "Performance benchmark",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "LOn97bynk"
+          },
+          "format": "time_series",
+          "group": [],
+          "hide": false,
+          "metricColumn": "label",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__unixEpochGroup(\"blockTimestamp\", $__interval) as \"time\",\n  'AVG' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_avg_rate'\nORDER BY 1;",
+          "refId": "Average percent",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "LOn97bynk"
+          },
+          "format": "time_series",
+          "group": [],
+          "hide": false,
+          "metricColumn": "label",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__unixEpochGroup(\"blockTimestamp\", $__interval) as \"time\",\n  'TOP' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_top_rate'\nORDER BY 1;",
+          "refId": "Average over top 10",
           "select": [
             [
               {
@@ -1561,7 +1634,7 @@
         "h": 8,
         "w": 18,
         "x": 0,
-        "y": 24
+        "y": 28
       },
       "id": 22,
       "maxDataPoints": 30,
@@ -1676,7 +1749,7 @@
         "h": 8,
         "w": 6,
         "x": 18,
-        "y": 24
+        "y": 28
       },
       "id": 24,
       "maxDataPoints": 30,
@@ -1798,7 +1871,7 @@
         "h": 8,
         "w": 18,
         "x": 0,
-        "y": 32
+        "y": 36
       },
       "id": 23,
       "maxDataPoints": 30,
