@@ -1423,6 +1423,28 @@
                 "value": 2
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "LIDO_AVG"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "AVG over Lido"
+              }
+            ]
           }
         ]
       },
@@ -1461,6 +1483,37 @@
           "rawQuery": true,
           "rawSql": "SELECT\n  $__unixEpochGroup(\"blockTimestamp\", $__interval) as \"time\",\n  labels ->> 'moniker' AS metric,\n  value\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_idx'\nORDER BY 1,2;",
           "refId": "Tracked validators perf rates",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "LOn97bynk"
+          },
+          "format": "time_series",
+          "group": [],
+          "hide": false,
+          "metricColumn": "label",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__unixEpochGroup(\"blockTimestamp\", $__interval) as \"time\",\n  'LIDO_AVG' AS metric,\n  AVG(value)\nFROM metrics\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") AND\n  name = 'vals_perf_idx'\nGROUP BY 1\nORDER BY 1;",
+          "refId": "AVG over tracked validators",
           "select": [
             [
               {
