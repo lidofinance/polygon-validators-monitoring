@@ -106,7 +106,10 @@ export class WorkerService implements OnModuleInit {
       this.logger.log('Starting main update cycle');
       // retrieve the latest block from ethereum
       const latestBlock = await this.provider.getBlock('latest');
-      if (!this.isNewBlock(latestBlock)) return;
+      if (!this.isNewBlock(latestBlock)) {
+        this.logger.log('No new blocks found, terminating main update cycle');
+        return;
+      }
       this.latestBlockNumber = latestBlock.number;
       this.logger.log(`Latest block ${latestBlock.number}`);
 
