@@ -80,7 +80,7 @@ export class EnvironmentVariables {
   CHAIN_ID!: number;
 
   @IsArray()
-  @Transform(({ value }) => value.split(',').map((v: string) => Number(v)))
+  @Transform(({ value }) => value.split(',').filter(Boolean).map((v: string) => Number(v)))
   @IsOptional()
   TRACKED_IDS: number[];
 
@@ -91,10 +91,6 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   METRICS_RETENTION_CRON = '0 */1 * * *';
-
-  @IsOptional()
-  @IsString()
-  METRICS_COMPUTE_CRON = '*/12 * * * * *';
 
   @IsOptional()
   @IsString()
