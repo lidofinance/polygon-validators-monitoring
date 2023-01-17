@@ -189,7 +189,7 @@ export class ValidatorsService implements OnModuleInit {
 
   public async getTrackedValidatorsIds(opts: CallOverrides): Promise<number[]> {
     const staticIds = this.configService.get('TRACKED_IDS');
-    if (staticIds.length) {
+    if (staticIds?.length) {
       return staticIds;
     }
 
