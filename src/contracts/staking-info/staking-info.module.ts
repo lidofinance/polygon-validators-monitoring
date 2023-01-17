@@ -1,11 +1,11 @@
 import { ContractModule } from '@lido-nestjs/contracts';
 import { Module } from '@nestjs/common';
 
-import { StakingInfo__factory } from '../generated';
 import {
   STAKING_INFO_ADDRESSES,
   STAKING_INFO_TOKEN,
 } from './staking-info.consts';
+import { StakingInfo__factory } from '../generated';
 
 @Module({})
 export class StakingInfoModule extends ContractModule {

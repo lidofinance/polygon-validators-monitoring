@@ -1,8 +1,8 @@
 import { ContractModule } from '@lido-nestjs/contracts';
 import { Module } from '@nestjs/common';
 
-import { EventsHub__factory } from '../generated';
 import { EVENTS_HUB_ADDRESSES, EVENTS_HUB_TOKEN } from './events-hub.consts';
+import { EventsHub__factory } from '../generated';
 
 @Module({})
 export class EventsHubModule extends ContractModule {

@@ -124,14 +124,13 @@ export class CheckpointsService {
     const opts = { blockTag: event.blockNumber };
 
     const [trackedIds, activeSet] = await Promise.all([
-      await this.validators.getTrackedValidatorsIds(opts),
-      await this.validators.getValidatorsActiveSet(opts),
+      this.validators.getTrackedValidatorsIds(opts),
+      this.validators.getValidatorsActiveSet(opts),
     ]);
 
     const commited = await Promise.all(
-      signers.map(
-        async (signer) =>
-          await this.validators.signerToValidatorId(signer, opts),
+      signers.map((signer) =>
+        this.validators.signerToValidatorId(signer, opts),
       ),
     );
 
