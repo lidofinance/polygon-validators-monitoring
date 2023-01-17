@@ -80,7 +80,12 @@ export class EnvironmentVariables {
   CHAIN_ID!: number;
 
   @IsArray()
-  @Transform(({ value }) => value.split(',').filter(Boolean).map((v: string) => Number(v)))
+  @Transform(({ value }) =>
+    value
+      .split(',')
+      .filter(Boolean)
+      .map((v: string) => Number(v)),
+  )
   @IsOptional()
   TRACKED_IDS: number[];
 
