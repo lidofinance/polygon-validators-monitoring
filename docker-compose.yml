@@ -18,7 +18,6 @@ services:
       - LOG_LEVEL=debug
       - WORKER_UPDATE_CRON=* * * * *
       - METRICS_RETENTION_CRON=* * * * *
-      - METRICS_COMPUTE_CRON=* * * * *
       - STAKE_EVENTS_CRON=* * * * *
       - MONIKERS_JSON=/app/monikers.json
       - CHAIN_ID
