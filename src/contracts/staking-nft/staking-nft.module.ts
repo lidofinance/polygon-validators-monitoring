@@ -1,8 +1,8 @@
 import { ContractModule } from '@lido-nestjs/contracts';
 import { Module } from '@nestjs/common';
 
-import { StakingNft__factory } from '../generated';
 import { STAKING_NFT_ADDRESSES, STAKING_NFT_TOKEN } from './staking-nft.consts';
+import { StakingNft__factory } from '../generated';
 
 @Module({})
 export class StakingNftModule extends ContractModule {
