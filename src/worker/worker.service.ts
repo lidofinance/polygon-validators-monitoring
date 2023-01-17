@@ -140,12 +140,8 @@ export class WorkerService implements OnModuleInit {
         rangeStart = rangeStop;
       }
 
-      await this.computeMetrics();
-
-      const lastCheckpoint = await this.checkpoints.getLastCheckpoint();
-      if (lastCheckpoint && !this.isStaleCheckpoint(lastCheckpoint)) {
-        await this.exposeUnderPerfStrike(lastCheckpoint);
-      }
+      const metricsHead = await this.computeMetrics();
+      await this.exposeUnderPerfStrike(metricsHead);
 
       this.logger.log("End block's fetch cycle");
     } catch (error) {
@@ -261,7 +257,7 @@ export class WorkerService implements OnModuleInit {
     }
   }
 
-  private async computeMetrics() {
+  private async computeMetrics(): Promise<number> {
     this.logger.log('Staring metrics computation');
 
     const eCheckpointNum =
@@ -285,7 +281,11 @@ export class WorkerService implements OnModuleInit {
       await allSettled(jobs);
     } while (nums.length > 0);
 
-    this.logger.log('Metrics computation complete');
+    this.logger.log(
+      `Metrics computation complete, metrics head: ${eCheckpointNum}`,
+    );
+
+    return eCheckpointNum;
   }
 
   @OneAtTime()
@@ -514,7 +514,23 @@ export class WorkerService implements OnModuleInit {
   /**
    * Expose metric of checkpoints under PB in the row for the given validator
    */
-  private async exposeUnderPerfStrike(checkpoint: Checkpoint): Promise<void> {
+  private async exposeUnderPerfStrike(checkpointNum: number): Promise<void> {
+    const checkpoint = await this.checkpoints.getCheckpointByNumber(
+      checkpointNum,
+    );
+
+    if (!checkpoint) {
+      this.logger.warn(`Checkpoint ${checkpointNum} at metrics head not found`);
+      return;
+    }
+
+    if (this.isStaleCheckpoint(checkpoint)) {
+      this.logger.debug(
+        `Stale checkpoint ${checkpoint.number} to expose miss strike`,
+      );
+      return;
+    }
+
     const trackedVals = checkpoint.duties
       .filter((d) => d.isTracked)
       .map((d) => {
@@ -531,7 +547,12 @@ export class WorkerService implements OnModuleInit {
 
     const buf = Object.fromEntries(trackedVals.map((o) => [o.vId, []]));
     for (const metric of values) {
-      buf[metric.labels.vId].push(metric.value); // sorted by timestamp list of comparison results
+      const vId = metric.labels.vId;
+      if (buf[vId] === undefined) {
+        // latest checkpoint may not include all tracked validators
+        this.logger.warn(`Unable to find ${vId} in tracked validators buffer`);
+      }
+      buf[vId]?.push(metric.value); // sorted by timestamp list of comparison results
     }
 
     for (const v of trackedVals) {
