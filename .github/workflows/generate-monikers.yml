@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          ref: master
+          ref: develop
 
       - name: Fetch monikers
         run: >-
@@ -30,7 +30,7 @@ jobs:
         uses: peter-evans/create-pull-request@v4
         with:
           author: GitHub <noreply@github.com>
-          commit-message: 'ci: update monikers.json'
+          commit-message: 'chore: update monikers.json'
           branch: monikers/patch
           title: Update monikers.json
           body: New monikers fetched
