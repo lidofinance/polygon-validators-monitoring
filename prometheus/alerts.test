@@ -35,42 +35,54 @@ tests:
     input_series:
       - series: >-
           polygon_validators_monitoring_under_pb_strike{moniker="Tank"}
-        values: 0 1 700+700x2
+        values: 0 1 700+700x3
     alert_rule_test:
       # GP1
       - eval_time: 5m
-        alertname: ValidatorInGP
+        alertname: ValidatorEntersGP
         exp_alerts:
           - exp_labels:
               severity: high
               moniker: Tank
-              level: GP1
             exp_annotations:
-              summary: Validator Tank is in Grace Period 1!
+              summary: Validator Tank enters Grace Period!
+      # Mute alerts not firing yet
+      - eval_time: 5m
+        alertname: ValidatorEntersGPMute
+      # After 5 minutes mute should exist
+      - eval_time: 10m
+        alertname: ValidatorEntersGPMute
+        exp_alerts:
+          - exp_labels:
+              moniker: Tank
       # GP2
       - eval_time: 10m
-        alertname: ValidatorInGP
+        alertname: ValidatorGPBump
         exp_alerts:
           - exp_labels:
               severity: high
               moniker: Tank
-              level: GP2
             exp_annotations:
               summary: Validator Tank is in Grace Period 2!
-      # FN
+      # FN only
       - eval_time: 15m
-        alertname: ValidatorInGP
+        alertname: ValidatorGPBump
         exp_alerts:
           - exp_labels:
-              severity: high
+              severity: critical
               moniker: Tank
-              level: FN
             exp_annotations:
               summary: >-
                 Validator Tank has received Final Notice
                 and will be unstaked soon.
-      # should stop
+      # should keep ValidatorEntersGP till recover
       - eval_time: 20m
-        alertname: ValidatorInGP
+        alertname: ValidatorEntersGP
+        exp_alerts:
+          - exp_labels:
+              severity: high
+              moniker: Tank
+            exp_annotations:
+              summary: Validator Tank enters Grace Period!
 
 # vim: set ts=2 sw=2 ft=yaml:

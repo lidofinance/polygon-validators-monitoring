@@ -56,6 +56,12 @@ services:
       - prometheus-data:/prometheus
     restart: unless-stopped
 
+  alertmanager:
+    image: prom/alertmanager:v0.25.0
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+    restart: unless-stopped
+
 volumes:
   prometheus-data:
 # vim: set ts=2 sw=2:
