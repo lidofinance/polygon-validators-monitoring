@@ -1,3 +1,5 @@
+import { CHAINS } from '@lido-nestjs/constants';
+
 export enum Status {
   Inactive = 0,
   Active,
@@ -6,3 +8,8 @@ export enum Status {
 }
 
 export const ACTIVE_SET_SIZE = 100;
+
+export const POLIDO_V2_BLOCK = {
+  [CHAINS.Mainnet]: 16525714,
+  [CHAINS.Goerli]: 8408350, // just the one close enough to mainnet one's timestamp
+};

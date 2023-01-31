@@ -25,10 +25,9 @@ import {
   StakeManager,
   StakingNft,
   ValidatorInfo,
-  isPoLidoV1,
 } from 'contracts';
 
-import { Status } from './validators.consts';
+import { POLIDO_V2_BLOCK, Status } from './validators.consts';
 import { Validator } from './validators.interfaces';
 
 @Injectable()
@@ -176,7 +175,7 @@ export class ValidatorsService implements OnModuleInit {
   public async getActiveLidoValidatorsIds(
     opts: CallOverrides,
   ): Promise<number[]> {
-    const ids = (await isPoLidoV1(this.nodeOperatorsRegistryV1, opts))
+    const ids = this.isPoLidoV1(opts)
       ? await this.getActiveLidoValidatorsIdsV1(opts)
       : await this.getActiveLidoValidatorsIdsV2(opts);
 
@@ -236,5 +235,22 @@ export class ValidatorsService implements OnModuleInit {
     );
 
     return vals;
+  }
+
+  private isPoLidoV1(opts: CallOverrides): boolean {
+    const blockTag = Number(opts?.blockTag);
+    if (!blockTag) {
+      // either undefined or 'latest'
+      return false; // modern by default
+    }
+
+    const chainId = this.configService.get('CHAIN_ID');
+    const shiftTs = POLIDO_V2_BLOCK[chainId];
+
+    if (!shiftTs) {
+      throw Error(`Unknown chain id ${chainId}`);
+    }
+
+    return blockTag < shiftTs;
   }
 }
