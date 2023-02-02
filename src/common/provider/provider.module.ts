@@ -18,9 +18,20 @@ import { ProviderService } from './provider.service';
           urls: configService.get('EL_API_URLS'),
           network: configService.get('CHAIN_ID'),
           fetchMiddlewares: [
-            async (next) => {
+            async (next, ctx) => {
+              const url = ctx?.provider?.connection?.url || 'unknown';
+              const hostname = url
+                .split('://')
+                .pop()
+                .split('/')
+                .at(0)
+                .split(':')
+                .at(0);
+
               const endTimer =
-                prometheusService.elRpcRequestDuration.startTimer();
+                prometheusService.elRpcRequestDuration.startTimer({
+                  provider: hostname,
+                });
 
               try {
                 const result = await next();

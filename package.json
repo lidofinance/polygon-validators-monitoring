@@ -37,7 +37,7 @@
     "@lido-nestjs/constants": "^1.1.0",
     "@lido-nestjs/contracts": "^2.2.0",
     "@lido-nestjs/decorators": "^1.0.0",
-    "@lido-nestjs/execution": "^1.8.0",
+    "@lido-nestjs/execution": "^1.9.0",
     "@lido-nestjs/logger": "^1.0.1",
     "@lido-nestjs/utils": "^1.2.0",
     "@nestjs/common": "^8.2.5",
