@@ -559,7 +559,7 @@ export class WorkerService implements OnModuleInit {
     if (blockNumber === this.lastBlock?.number) return;
 
     const { hash, number, timestamp } = await this.provider.getBlock(
-      blockNumber
+      blockNumber,
     );
     this.lastBlock = { hash, number };
     this.prometheus.lastBlockTimestamp.set(timestamp);
