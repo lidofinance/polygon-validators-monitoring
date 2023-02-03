@@ -1,3 +1,17 @@
+# [0.5.0](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.4.0...0.5.0) (2023-02-03)
+
+
+### Bug Fixes
+
+* update PoLidoV2 contracts addresses ([8f6955e](https://github.com/lidofinance/polygon-validators-monitoring/commit/8f6955eb1cb5f710806fddfe7ea9a2d1fb381e81))
+
+
+### Features
+
+* expose provider to RPC metrics ([a6bbc23](https://github.com/lidofinance/polygon-validators-monitoring/commit/a6bbc2361a4d1655a457e0c72066fb65e885a6ec))
+
+
+
 # [0.4.0](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.3.0...0.4.0) (2023-01-18)
 
 
