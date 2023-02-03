@@ -453,7 +453,7 @@
       },
       "gridPos": {
         "h": 3,
-        "w": 7,
+        "w": 11,
         "x": 6,
         "y": 2
       },
@@ -461,8 +461,8 @@
       "options": {
         "colorMode": "background",
         "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
+        "justifyMode": "auto",
+        "orientation": "vertical",
         "reduceOptions": {
           "calcs": [
             "last"
@@ -470,10 +470,7 @@
           "fields": "",
           "values": false
         },
-        "text": {
-          "titleSize": 16,
-          "valueSize": 16
-        },
+        "text": {},
         "textMode": "auto"
       },
       "pluginVersion": "8.4.6",
@@ -485,7 +482,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "rate(polygon_validators_monitoring_tasks_durations_seconds_sum[$__range]) / rate(polygon_validators_monitoring_tasks_durations_seconds_count[$__range])",
+          "expr": "rate(polygon_validators_monitoring_tasks_durations_seconds_sum{status=\"success\"}[$__range]) / rate(polygon_validators_monitoring_tasks_durations_seconds_count[$__range])",
           "interval": "",
           "legendFormat": "{{name}}",
           "range": true,
@@ -528,7 +525,7 @@
       "gridPos": {
         "h": 3,
         "w": 7,
-        "x": 13,
+        "x": 17,
         "y": 2
       },
       "id": 3,
@@ -570,142 +567,6 @@
       "type": "stat"
     },
     {
-      "description": "Count errors during RPC requests",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "noValue": "0",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "#EAB839",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 2,
-        "x": 20,
-        "y": 2
-      },
-      "id": 57,
-      "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {
-          "titleSize": 16,
-          "valueSize": 16
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.4.6",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Ggj6dYQ7z"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "sum(increase(polygon_validators_monitoring_el_rpc_requests_duration_seconds_count{env=~\"$env\",source=~\"$source\",instance=~\"$instance\",status=\"failure\"}[$__range])) by (instance)",
-          "interval": "",
-          "legendFormat": "{{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "ETH RPC errors count",
-      "type": "stat"
-    },
-    {
-      "description": "Count of requests to EL RPC node ",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 2,
-        "x": 22,
-        "y": 2
-      },
-      "id": 5,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "text": {
-          "titleSize": 16,
-          "valueSize": 16
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.4.6",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "Ggj6dYQ7z"
-          },
-          "editorMode": "code",
-          "exemplar": true,
-          "expr": "sum(increase(polygon_validators_monitoring_el_rpc_requests_duration_seconds_count{env=~\"$env\",source=~\"$source\",instance=~\"$instance\"}[$__range])) by (instance)",
-          "interval": "",
-          "legendFormat": "{{instance}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "EL requests count",
-      "type": "stat"
-    },
-    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -715,7 +576,8 @@
       },
       "id": 10,
       "panels": [],
-      "title": "Requests",
+      "repeat": "provider",
+      "title": "Requests via $provider",
       "type": "row"
     },
     {
@@ -728,14 +590,10 @@
         "mode": "spectrum"
       },
       "dataFormat": "tsbuckets",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Ggj6dYQ7z"
-      },
       "description": "Duration of requests to the RPC provider",
       "gridPos": {
         "h": 8,
-        "w": 16,
+        "w": 13,
         "x": 0,
         "y": 6
       },
@@ -756,7 +614,7 @@
             "uid": "Ggj6dYQ7z"
           },
           "exemplar": false,
-          "expr": "sum(increase(polygon_validators_monitoring_el_rpc_requests_duration_seconds_bucket{env=~\"$env\",source=~\"$source\"}[$__interval])) by (le)",
+          "expr": "sum(increase(polygon_validators_monitoring_el_rpc_requests_duration_seconds_bucket{env=~\"$env\",source=~\"$source\",provider=~\"$provider\"}[$__interval])) by (le)",
           "format": "heatmap",
           "instant": false,
           "interval": "",
@@ -836,8 +694,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
+        "w": 9,
+        "x": 13,
         "y": 6
       },
       "id": 20,
@@ -862,7 +720,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "sum(increase(polygon_validators_monitoring_el_rpc_requests_duration_seconds_count{env=~\"$env\",source=~\"$source\",instance=~\"$instance\",status=\"failure\"}[1m])) by (instance)",
+          "expr": "sum(increase(polygon_validators_monitoring_el_rpc_requests_duration_seconds_count{env=~\"$env\",source=~\"$source\",instance=~\"$instance\",status=\"failure\",provider=~\"$provider\"}[1m])) by (instance)",
           "format": "time_series",
           "interval": "",
           "legendFormat": "{{instance}}",
@@ -872,6 +730,142 @@
       ],
       "title": "RPC requests errors",
       "type": "timeseries"
+    },
+    {
+      "description": "Count errors during RPC requests",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 22,
+        "y": 6
+      },
+      "id": 57,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "titleSize": 16,
+          "valueSize": 16
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ggj6dYQ7z"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(increase(polygon_validators_monitoring_el_rpc_requests_duration_seconds_count{env=~\"$env\",source=~\"$source\",instance=~\"$instance\",status=\"failure\",provider=~\"$provider\"}[$__range])) by (instance)",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "ETH RPC errors count",
+      "type": "stat"
+    },
+    {
+      "description": "Count of requests to EL RPC node ",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 2,
+        "x": 22,
+        "y": 10
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "last"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "text": {
+          "titleSize": 16,
+          "valueSize": 16
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Ggj6dYQ7z"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "sum(increase(polygon_validators_monitoring_el_rpc_requests_duration_seconds_count{env=~\"$env\",source=~\"$source\",instance=~\"$instance\",provider=~\"$provider\"}[$__range])) by (instance)",
+          "interval": "",
+          "legendFormat": "{{instance}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "EL requests count",
+      "type": "stat"
     },
     {
       "collapsed": true,
@@ -1008,7 +1002,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   }
                 ]
               },
@@ -1097,7 +1092,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1190,7 +1186,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   }
                 ]
               },
@@ -1281,7 +1278,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1543,7 +1541,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   }
                 ]
               },
@@ -1664,7 +1663,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   }
                 ]
               },
@@ -1785,7 +1785,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   }
                 ]
               },
@@ -1942,7 +1943,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   }
                 ]
               },
@@ -2152,6 +2154,23 @@
         "query": "",
         "skipUrlSync": false,
         "type": "textbox"
+      },
+      {
+        "definition": "label_values(polygon_validators_monitoring_el_rpc_requests_duration_seconds_sum{env=~\"$env\", source=~\"$source\"}, provider)",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "provider",
+        "options": [],
+        "query": {
+          "query": "label_values(polygon_validators_monitoring_el_rpc_requests_duration_seconds_sum{env=~\"$env\", source=~\"$source\"}, provider)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
       }
     ]
   },

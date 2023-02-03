@@ -17,7 +17,6 @@ export * from './root-chain/root-chain.interfaces';
 export * from './node-operators-registry-v1/node-operators-registry.consts';
 export * from './node-operators-registry-v1/node-operators-registry.interfaces';
 export * from './node-operators-registry-v1/node-operators-registry.module';
-export * from './node-operators-registry-v1/node-operators-registry.utils';
 
 export * from './node-operators-registry-v2/node-operators-registry.consts';
 export * from './node-operators-registry-v2/node-operators-registry.interfaces';

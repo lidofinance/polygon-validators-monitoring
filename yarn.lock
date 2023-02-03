@@ -1054,10 +1054,10 @@
   resolved "https://registry.yarnpkg.com/@lido-nestjs/decorators/-/decorators-1.0.0.tgz#def4d0192b032c0d522de1b9bf38d1bec3c63077"
   integrity sha512-6k2eeLV7tFjKiqk26LWZHWfLowVuUbKC6+NunHHZIqEtO4xRWeOwMg6ntm0AEMdZ0WL0F6KDrFV+g7bhWB4cWA==
 
-"@lido-nestjs/execution@^1.8.0":
-  version "1.8.3"
-  resolved "https://registry.yarnpkg.com/@lido-nestjs/execution/-/execution-1.8.3.tgz#9dc86e2097a6582683af5256a6ef60cf8655483f"
-  integrity sha512-MYb0iyLl3lrKJEVEw+JRzhaygpGqX/KVNPYcr9SgyJ6WzUBN68csmzQnVyGzgparO9WKbIJKNmrMxexOdORCWg==
+"@lido-nestjs/execution@^1.9.0":
+  version "1.9.0"
+  resolved "https://registry.yarnpkg.com/@lido-nestjs/execution/-/execution-1.9.0.tgz#73dd0454227e74f2421c7e39b180b5730c1c19b7"
+  integrity sha512-Tm0rca67miBFMoTu6dUg/kDbjK1z8VKcBBMEWTEjEYnXM7KsmaLZljCRW6KVYK372CsVuDNYajx1z2xBparb/Q==
   dependencies:
     "@ethersproject/bignumber" "^5.5.0"
     "@ethersproject/bytes" "^5.5.0"
@@ -1067,7 +1067,7 @@
     "@ethersproject/providers" "^5.5.3"
     "@ethersproject/web" "^5.5.1"
     "@lido-nestjs/logger" "1.3.0"
-    "@lido-nestjs/middleware" "1.1.1"
+    "@lido-nestjs/middleware" "1.2.0"
 
 "@lido-nestjs/logger@1.3.0", "@lido-nestjs/logger@^1.0.1":
   version "1.3.0"
@@ -1078,10 +1078,10 @@
     traverse "^0.6.7"
     winston "^3.4.0"
 
-"@lido-nestjs/middleware@1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@lido-nestjs/middleware/-/middleware-1.1.1.tgz#ffe6cb343f5e81282b70f8746879f3cf506ac3d5"
-  integrity sha512-0y9e7ydM3NkAhoiiv/tSsBu8KLbvPJ19QPRiAYBy33y8Fv5PPjypA3qAG03ImBQ3qFXAp29ZUrSs18vkACf8Ng==
+"@lido-nestjs/middleware@1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@lido-nestjs/middleware/-/middleware-1.2.0.tgz#0e64b69149ef1f7e4594896fd08d6e0bd9ef5382"
+  integrity sha512-0rkXWKXEKJPRbq1W6cN+yelhc+CruqhUqmdkNKwl4vTk631fpG9yfSfxxQFDAs3LhsTORqqgKUBpdK+epRYjIQ==
 
 "@lido-nestjs/utils@^1.2.0":
   version "1.3.0"
@@ -1541,6 +1541,11 @@
   integrity sha512-X3HPWTwXRerBZS7Mo1k6vMVR1Z6zmJcDVn5O/31whe0tnjE4te6ZJSJGq1RiqHPjzPdMTfjCFogDJmwng9xHaQ==
   dependencies:
     "@types/superagent" "*"
+
+"@types/validator@^13.7.10":
+  version "13.7.10"
+  resolved "https://registry.yarnpkg.com/@types/validator/-/validator-13.7.10.tgz#f9763dc0933f8324920afa9c0790308eedf55ca7"
+  integrity sha512-t1yxFAR2n0+VO6hd/FJ9F2uezAZVWHLmpmlJzm1eX03+H7+HsuTAp7L8QJs+2pQCfWkP1+EXsGK9Z9v7o/qPVQ==
 
 "@types/yargs-parser@*":
   version "21.0.0"
@@ -2313,12 +2318,13 @@ class-transformer@^0.5.1:
   resolved "https://registry.yarnpkg.com/class-transformer/-/class-transformer-0.5.1.tgz#24147d5dffd2a6cea930a3250a677addf96ab336"
   integrity sha512-SQa1Ws6hUbfC98vKGxZH3KFY0Y1lm5Zm0SY8XX9zbK7FJCyVEac3ATW0RIpwzW+oOfmHE5PMPufDG9hCfoEOMw==
 
-class-validator@^0.13.2:
-  version "0.13.2"
-  resolved "https://registry.yarnpkg.com/class-validator/-/class-validator-0.13.2.tgz#64b031e9f3f81a1e1dcd04a5d604734608b24143"
-  integrity sha512-yBUcQy07FPlGzUjoLuUfIOXzgynnQPPruyK1Ge2B74k9ROwnle1E+NxLWnUv5OLU8hA/qL5leAE9XnXq3byaBw==
+class-validator@^0.14.0:
+  version "0.14.0"
+  resolved "https://registry.yarnpkg.com/class-validator/-/class-validator-0.14.0.tgz#40ed0ecf3c83b2a8a6a320f4edb607be0f0df159"
+  integrity sha512-ct3ltplN8I9fOwUd8GrP8UQixwff129BkEtuWDKL5W45cQuLd19xqmTLu5ge78YDm/fdje6FMt0hGOhl0lii3A==
   dependencies:
-    libphonenumber-js "^1.9.43"
+    "@types/validator" "^13.7.10"
+    libphonenumber-js "^1.10.14"
     validator "^13.7.0"
 
 cli-cursor@^3.1.0:
@@ -4638,7 +4644,7 @@ levn@^0.4.1:
     prelude-ls "^1.2.1"
     type-check "~0.4.0"
 
-libphonenumber-js@^1.9.43:
+libphonenumber-js@^1.10.14:
   version "1.10.18"
   resolved "https://registry.yarnpkg.com/libphonenumber-js/-/libphonenumber-js-1.10.18.tgz#657c419071c8a02c638c0e80d9ee1232f152f280"
   integrity sha512-NS4ZEgNhwbcPz1gfSXCGFnQm0xEiyTSPRthIuWytDzOiEG9xnZ2FbLyfJC4tI2BMAAXpoWbNxHYH75pa3Dq9og==

@@ -1,4 +1,4 @@
-import { Block } from '@ethersproject/abstract-provider';
+import { Block, BlockTag } from '@ethersproject/abstract-provider';
 import { OneAtTime } from '@lido-nestjs/decorators';
 import { SimpleFallbackJsonRpcBatchProvider } from '@lido-nestjs/execution';
 import { LOGGER_PROVIDER } from '@lido-nestjs/logger';
@@ -117,28 +117,20 @@ export class WorkerService implements OnModuleInit {
       let rangeStart = await this.getStartBlockNumber();
       this.logger.log(`Continue fetching from block ${rangeStart}`);
 
-      while (rangeStart <= latestBlock.number) {
+      while (rangeStart < latestBlock.number) {
         const rangeStop = Math.min(
           rangeStart + BLOCK_HANDLE_CHUNK,
           latestBlock.number,
         );
 
         await this.handleBlocksRange(rangeStart, rangeStop);
-
-        if (rangeStop === latestBlock.number) {
-          this.prometheus.lastBlockTimestamp.set(latestBlock.timestamp);
-          this.lastBlock = latestBlock;
-          break;
-        }
-
-        const { hash, number, timestamp } = await this.provider.getBlock(
-          rangeStop,
-        );
-        this.lastBlock = { hash, number };
-        this.prometheus.lastBlockTimestamp.set(timestamp);
+        await this.updateLastBlock(rangeStop);
 
         rangeStart = rangeStop;
       }
+
+      // metric's fast-forwarding to the latest block
+      await this.updateLastBlock(this.latestBlockNumber);
 
       const metricsHead = await this.computeMetrics();
       await this.exposeUnderPerfStrike(metricsHead);
@@ -561,5 +553,15 @@ export class WorkerService implements OnModuleInit {
         .labels({ vid: v.vId.toString(), moniker: v.moniker })
         .set(s);
     }
+  }
+
+  private async updateLastBlock(blockNumber: BlockTag): Promise<void> {
+    if (blockNumber === this.lastBlock?.number) return;
+
+    const { hash, number, timestamp } = await this.provider.getBlock(
+      blockNumber,
+    );
+    this.lastBlock = { hash, number };
+    this.prometheus.lastBlockTimestamp.set(timestamp);
   }
 }
