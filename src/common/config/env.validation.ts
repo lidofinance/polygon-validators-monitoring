@@ -89,6 +89,16 @@ export class EnvironmentVariables {
   @IsOptional()
   TRACKED_IDS: number[];
 
+  @IsArray()
+  @Transform(({ value }) =>
+    value
+      .split(',')
+      .filter(Boolean)
+      .map((v: string) => v),
+  )
+  @IsOptional()
+  DELEGATORS: string[];
+
   @IsOptional()
   @IsString()
   WORKER_UPDATE_CRON = '*/12 * * * * *';

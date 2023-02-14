@@ -31,11 +31,12 @@ async function bootstrap() {
     Sentry.init({ dsn: sentryDsn, release, environment });
   }
 
-  process.on('unhandledRejection', async (error: any) => {
+  process.on('unhandledRejection', async (error: Error) => {
     logger.warn(
       "Dangling promise rejection detected. It's not handled anywhere.",
     );
-    logger.warn(error);
+    logger.error(error.message, error.stack);
+    process.exit(1);
   });
 
   // app

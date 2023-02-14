@@ -10,12 +10,19 @@ import { DataSource } from 'typeorm';
 
 import { CheckpointsModule, CheckpointsService } from 'checkpoints';
 import { ConfigModule, ConfigService } from 'common/config';
+import {
+  STAKE_MANAGER_TOKEN,
+  StakeManager,
+  StakeManagerModule,
+  ValidatorShare__factory,
+} from 'contracts';
 import { NewHeaderBlockEvent } from 'contracts/generated/RootChain';
 import { Checkpoint } from 'storage/entities';
 import { ACTIVE_SET_SIZE, ValidatorsModule } from 'validators';
 import { DRY_RUN_WINDOW } from 'worker';
 
-const EVENT_PROCESSING_TIMEOUT = 60_000;
+const stMATIC = '0x9ee91F9f426fA633d227f7a9b000E28b9dfd8599';
+const EVENT_PROCESSING_TIMEOUT = 120_000;
 
 const DataSourceMockProvider = {
   provide: getDataSourceToken(),
@@ -40,6 +47,7 @@ const TypeOrmStub = {
 describe('CheckpointsService', () => {
   let elRPCProvider: SimpleFallbackJsonRpcBatchProvider;
   let checkpointsService: CheckpointsService;
+  let stakeManager: StakeManager;
   let moduleRef: TestingModule;
 
   beforeEach(async () => {
@@ -51,16 +59,30 @@ describe('CheckpointsService', () => {
           network: +process.env['CHAIN_ID'],
           urls: [process.env['RPC_URL']],
         }),
+        StakeManagerModule.forRootAsync({
+          inject: [SimpleFallbackJsonRpcBatchProvider],
+          async useFactory(provider: SimpleFallbackJsonRpcBatchProvider) {
+            return { provider };
+          },
+        }),
         CheckpointsModule,
         ValidatorsModule,
         TypeOrmStub,
         {
-          // resolve dependency for ValidatorsModule
           module: ConfigModule,
           providers: [
             {
               provide: ConfigService,
-              useValue: undefined,
+              useValue: {
+                get: (key: string) => {
+                  switch (key) {
+                    case 'DELEGATORS':
+                      return [stMATIC];
+                    case 'CHAIN_ID':
+                      return 1;
+                  }
+                },
+              },
             },
           ],
         },
@@ -69,6 +91,7 @@ describe('CheckpointsService', () => {
 
     elRPCProvider = moduleRef.get(SimpleFallbackJsonRpcBatchProvider);
     checkpointsService = moduleRef.get(CheckpointsService);
+    stakeManager = moduleRef.get(STAKE_MANAGER_TOKEN);
   });
 
   async function testCheckpointIsValid(
@@ -99,6 +122,90 @@ describe('CheckpointsService', () => {
       'should process the latest checkpoint',
       async () => {
         await testCheckpointIsValid(event);
+      },
+      EVENT_PROCESSING_TIMEOUT,
+    );
+  });
+
+  describe('check rewards', () => {
+    // If a validator includes a signature in the checkpoint between the twos missed,
+    // then the reward should be included in the second missed checkpoint.
+    // NB! Make sure no withdraws occured between checkpoints.
+    // NB! 1 wei diff tolerance for the moment.
+    it.each([
+      [16549911, 16550208, 16], // 3% commission
+      [16412765, 16413032, 76], // 0% commission
+      [16078011, 16078715, 70], // with proposer bonus included
+      [16476759, 16477246, 91], // with proposer bonus included
+    ])(
+      'rewards for including signature should be correct [%#]',
+      async (lBlock: number, rBlock: number, validatorId: number) => {
+        const events = await checkpointsService.getCheckpointEvents(
+          lBlock,
+          rBlock,
+        );
+        expect(events.length).toEqual(3);
+        const event = events.at(1);
+
+        const checkpoint = await testCheckpointIsValid(event);
+        const reward = checkpoint.rewards.find((r) => r.vId === validatorId);
+        expect(reward).toBeDefined();
+
+        const before = await stakeManager.validators(validatorId, {
+          blockTag: lBlock,
+        });
+        const after = await stakeManager.validators(validatorId, {
+          blockTag: rBlock,
+        });
+
+        expect(reward.own.gt(0)).toBeTruthy();
+        expect(
+          after.reward.sub(before.reward).sub(reward.own).lte(1),
+        ).toBeTruthy();
+
+        expect(reward.delegators.gt(0)).toBeTruthy();
+        expect(
+          after.delegatedAmount
+            .sub(before.delegatedAmount)
+            .sub(reward.delegators)
+            .lte(1),
+        ).toBeTruthy();
+      },
+      EVENT_PROCESSING_TIMEOUT,
+    );
+
+    it.each([
+      [54, 16527522],
+      [75, 16625457],
+    ])(
+      'delegator earning should be correct [%#]',
+      async (validatorId, block) => {
+        const event = (
+          await checkpointsService.getCheckpointEvents(block)
+        ).pop();
+        expect(event).toBeDefined();
+        const checkpoint = await testCheckpointIsValid(event);
+        const reward = checkpoint.rewards.find((r) => r.vId === validatorId);
+        expect(reward).toBeDefined();
+        expect(reward.earned.gt(0)).toBeTruthy();
+
+        const validator = await stakeManager.validators(validatorId, {
+          blockTag: block,
+        });
+        const validatorShare = ValidatorShare__factory.connect(
+          validator.contractAddress,
+          elRPCProvider,
+        );
+        const before = await validatorShare.getLiquidRewards(stMATIC, {
+          blockTag: block - 1,
+        });
+        const after = await validatorShare.getLiquidRewards(stMATIC, {
+          blockTag: block + 1,
+        });
+        const diff = after.sub(before);
+
+        expect(diff.gt(0)).toBeTruthy();
+        expect(diff.sub(reward.earned).lte(1)).toBeTruthy();
       },
       EVENT_PROCESSING_TIMEOUT,
     );

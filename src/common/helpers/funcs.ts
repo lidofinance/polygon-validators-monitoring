@@ -41,3 +41,32 @@ export function takeWhile(iterable: Iterable<any>, p: any): any[] {
 
   return c;
 }
+
+// simple LRU similar to https://stackoverflow.com/a/46432113,
+// but suggested by copilot and updated to generic
+export class LRU<K, T> {
+  private readonly _cache: Map<K, T>;
+  private readonly _maxSize: number;
+
+  constructor(maxSize: number) {
+    this._cache = new Map();
+    this._maxSize = maxSize;
+  }
+
+  public get(key: K): any {
+    const value = this._cache.get(key);
+    if (value) {
+      this._cache.delete(key);
+      this._cache.set(key, value);
+    }
+
+    return value;
+  }
+
+  public set(key: K, value: T): void {
+    this._cache.set(key, value);
+    if (this._cache.size > this._maxSize) {
+      this._cache.delete(this._cache.keys().next().value);
+    }
+  }
+}

@@ -20,6 +20,8 @@ services:
       - METRICS_RETENTION_CRON=* * * * *
       - STAKE_EVENTS_CRON=* * * * *
       - MONIKERS_JSON=/app/monikers.json
+      - TRACKED_IDS
+      - DELEGATORS
       - CHAIN_ID
       - START_BLOCK
       - DRY_RUN
