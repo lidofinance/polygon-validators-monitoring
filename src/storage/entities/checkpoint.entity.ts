@@ -1,6 +1,9 @@
+import { BigNumber } from '@ethersproject/bignumber';
 import { Column, Entity, JoinTable, OneToMany } from 'typeorm';
 
 import { Duty } from './duty.entity';
+import { Reward } from './reward.entity';
+import { BNTransformer } from './utils';
 
 @Entity('checkpoints')
 export class Checkpoint {
@@ -13,17 +16,30 @@ export class Checkpoint {
   @Column({ type: 'bigint' })
   blockTimestamp!: number;
 
-  // 0x + 64 hex, see https://stackoverflow.com/a/72775042
+  // 0x + 64 hex chars, see https://stackoverflow.com/a/72775042
   @Column({ type: 'varchar', length: 66 })
   txHash!: string;
 
-  // max uint256 decimal length
-  @Column({ type: 'varchar', length: 79, nullable: true })
-  reward?: string;
+  // 0x + 40 hex chars, see https://stackoverflow.com/a/72775042
+  @Column({ type: 'varchar', length: 42 })
+  proposer!: string;
 
-  @OneToMany(() => Duty, (duty) => duty.checkpoint, {
+  @Column({
+    type: 'numeric',
+    precision: 79,
+    transformer: new BNTransformer(),
+  })
+  totalReward!: BigNumber;
+
+  @OneToMany(() => Duty, (e) => e.checkpoint, {
     eager: true,
   })
   @JoinTable()
   duties: Duty[];
+
+  @OneToMany(() => Reward, (e) => e.checkpoint, {
+    eager: true,
+  })
+  @JoinTable()
+  rewards: Reward[];
 }

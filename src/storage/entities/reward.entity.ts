@@ -1,3 +1,4 @@
+import { BigNumber } from '@ethersproject/bignumber';
 import {
   Column,
   Entity,
@@ -7,15 +8,16 @@ import {
 } from 'typeorm';
 
 import { Checkpoint } from './checkpoint.entity';
+import { BNTransformer } from './utils';
 
-@Entity('duties')
+@Entity('rewards')
 @Index(['checkpoint', 'vId'], { unique: true })
-export class Duty {
+export class Reward {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   // I see no easy way to use the relation column as primary key therefore id column ^^^ is in use
-  @ManyToOne(() => Checkpoint, (checkpoint) => checkpoint.duties, {
+  @ManyToOne(() => Checkpoint, (checkpoint) => checkpoint.rewards, {
     onDelete: 'CASCADE',
   })
   checkpoint!: Checkpoint;
@@ -23,11 +25,26 @@ export class Duty {
   @Column({ type: 'integer' })
   vId!: number;
 
-  @Column({ type: 'boolean' })
-  isProposer: boolean;
+  @Column({
+    type: 'decimal',
+    precision: 79,
+    transformer: new BNTransformer(),
+  })
+  own!: BigNumber;
 
-  @Column({ type: 'boolean' })
-  fulfilled: boolean;
+  @Column({
+    type: 'decimal',
+    precision: 79,
+    transformer: new BNTransformer(),
+  })
+  delegators!: BigNumber;
+
+  @Column({
+    type: 'decimal',
+    precision: 79,
+    transformer: new BNTransformer(),
+  })
+  earned!: BigNumber;
 
   // the fields below exist to avoid joins / calls etc.
 
@@ -36,10 +53,4 @@ export class Duty {
 
   @Column({ type: 'varchar', length: 255 })
   moniker!: string;
-
-  @Column({ type: 'boolean' })
-  isTracked!: boolean;
-
-  @Column({ type: 'boolean' })
-  isTop!: boolean;
 }

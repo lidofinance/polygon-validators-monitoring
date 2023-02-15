@@ -10,9 +10,9 @@ import {
   LoggerService,
   OnModuleInit,
 } from '@nestjs/common';
-import * as LRUCache from 'lru-cache';
 
 import { ConfigService } from 'common/config';
+import { LRU } from 'common/helpers';
 import {
   NODE_OPERATORS_REGISTRY_V1_TOKEN,
   NODE_OPERATORS_REGISTRY_V2_TOKEN,
@@ -32,13 +32,12 @@ import { Validator } from './validators.interfaces';
 
 @Injectable()
 export class ValidatorsService implements OnModuleInit {
-  private signersCache: LRUCache<string, number>;
+  private signersCache: LRU<string, number>;
   public monikers: Map<string, string>;
 
   constructor(
     @Inject(LOGGER_PROVIDER) protected readonly logger: LoggerService,
     protected readonly configService: ConfigService,
-
     @Inject(NODE_OPERATORS_REGISTRY_V1_TOKEN)
     protected readonly nodeOperatorsRegistryV1: NodeOperatorsRegistryV1,
     @Inject(NODE_OPERATORS_REGISTRY_V2_TOKEN)
@@ -46,9 +45,7 @@ export class ValidatorsService implements OnModuleInit {
     @Inject(STAKE_MANAGER_TOKEN) protected readonly stakeManager: StakeManager,
     @Inject(STAKING_NFT_TOKEN) protected readonly stakingNFT: StakingNft,
   ) {
-    this.signersCache = new LRUCache({
-      max: 500, // roughly 3 times of validators count
-    });
+    this.signersCache = new LRU(500);
     this.monikers = new Map();
   }
 
@@ -109,7 +106,6 @@ export class ValidatorsService implements OnModuleInit {
       return this.monikers.get(strId);
     }
 
-    this.logger.debug(`Unknown validator ${strId}`);
     return `Anonymous ${strId}`;
   }
 
@@ -128,7 +124,7 @@ export class ValidatorsService implements OnModuleInit {
       await this.stakeManager.signerToValidator(signer, opts)
     ).toNumber();
     this.signersCache.set(signer, id);
-    this.logger.debug(`Signer ${signer} assigned with the validator ${id}`);
+    this.logger.debug(`Signer ${signer} bound with the validator ${id}`);
 
     return id;
   }
@@ -172,7 +168,7 @@ export class ValidatorsService implements OnModuleInit {
   /**
    * Fetch Lido validators ids from the registry
    */
-  public async getActiveLidoValidatorsIds(
+  private async getActiveLidoValidatorsIds(
     opts: CallOverrides,
   ): Promise<number[]> {
     const ids = this.isPoLidoV1(opts)
@@ -228,8 +224,9 @@ export class ValidatorsService implements OnModuleInit {
    */
   public async getValidatorsActiveSet(
     opts: CallOverrides,
+    epoch?: BigNumber,
   ): Promise<Validator[]> {
-    const epoch = await this.stakeManager.epoch(opts);
+    epoch = epoch || (await this.stakeManager.epoch(opts));
     const vals = (await this.getAllValidators(opts)).filter((v) =>
       this.isValidator(v, epoch),
     );
