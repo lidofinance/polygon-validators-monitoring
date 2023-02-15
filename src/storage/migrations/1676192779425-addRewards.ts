@@ -93,7 +93,7 @@ export class addRewards1676192779425 implements MigrationInterface {
       'checkpoints',
       'reward',
       new TableColumn({
-        name: 'reward',
+        name: 'totalReward',
         type: 'numeric',
         precision: 79,
       }),
@@ -105,7 +105,7 @@ export class addRewards1676192779425 implements MigrationInterface {
     await queryRunner.dropColumn('duties', 'isProposer');
     await queryRunner.changeColumn(
       'checkpoints',
-      'reward',
+      'totalReward',
       new TableColumn({
         isNullable: true,
         name: 'reward',

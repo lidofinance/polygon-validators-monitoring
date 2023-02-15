@@ -127,7 +127,7 @@ export class CheckpointsService {
     checkpoint.blockTimestamp = (await event.getBlock()).timestamp;
     checkpoint.txHash = event.transactionHash;
     checkpoint.proposer = event.args.proposer;
-    checkpoint.reward = event.args.reward;
+    checkpoint.totalReward = event.args.reward;
     // foreign entities
     checkpoint.rewards = [];
     checkpoint.duties = [];
@@ -163,8 +163,8 @@ export class CheckpointsService {
     const proposerBonus = await this.stakeManager.proposerBonus(
       atCheckpointBlock,
     );
-    const proposerReward = checkpoint.reward.mul(proposerBonus).div(100);
-    const rewardPerStake = checkpoint.reward
+    const proposerReward = checkpoint.totalReward.mul(proposerBonus).div(100);
+    const rewardPerStake = checkpoint.totalReward
       .sub(proposerReward)
       .mul(REWARD_PRECISION)
       .div(stakeOfSigners);

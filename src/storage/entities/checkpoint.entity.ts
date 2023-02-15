@@ -29,7 +29,7 @@ export class Checkpoint {
     precision: 79,
     transformer: new BNTransformer(),
   })
-  reward!: BigNumber;
+  totalReward!: BigNumber;
 
   @OneToMany(() => Duty, (e) => e.checkpoint, {
     eager: true,
