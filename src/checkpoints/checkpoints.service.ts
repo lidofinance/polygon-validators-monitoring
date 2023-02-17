@@ -211,22 +211,22 @@ export class CheckpointsService {
           rew.own = rew.own.add(proposerReward);
         }
 
-        const rewardsOnDelegated = v.delegatedAmount
+        const totalStake = v.amount.add(v.delegatedAmount);
+        const rewardsOnTotalStake = totalStake
           .mul(rewardPerStake)
           .div(REWARD_PRECISION);
-
-        const commissionedRewards = rewardsOnDelegated
+        const rewardsOnOwnStake = rewardsOnTotalStake
+          .mul(v.amount)
+          .div(totalStake);
+        const commissionedRewards = rewardsOnTotalStake
+          .sub(rewardsOnOwnStake)
           .mul(v.commissionRate)
           .div(100);
 
-        const rewardsOnSelf = v.amount
-          .mul(rewardPerStake)
-          .div(REWARD_PRECISION);
-
         rew.delegators = rew.delegators.add(
-          rewardsOnDelegated.sub(commissionedRewards),
+          rewardsOnTotalStake.sub(rewardsOnOwnStake.add(commissionedRewards)),
         );
-        rew.own = rew.own.add(rewardsOnSelf.add(commissionedRewards));
+        rew.own = rew.own.add(rewardsOnOwnStake.add(commissionedRewards));
 
         const delegators = this.configService.get('DELEGATORS');
         if (delegators?.length) {
@@ -243,11 +243,13 @@ export class CheckpointsService {
           }
 
           if (delegatorsShares.gt(0)) {
-            const totals = await erc20like.totalSupply(atCheckpointBlock);
-            rew.earned = rewardsOnDelegated
-              .sub(commissionedRewards)
-              .mul(delegatorsShares)
-              .div(totals);
+            const totalShares = await erc20like.totalSupply(atCheckpointBlock);
+            const rewardPerShare = rew.delegators
+              .mul(REWARD_PRECISION)
+              .div(totalShares);
+            rew.earned = delegatorsShares
+              .mul(rewardPerShare)
+              .div(REWARD_PRECISION);
           }
         }
       }

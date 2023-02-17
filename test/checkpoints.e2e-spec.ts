@@ -158,23 +158,23 @@ describe('CheckpointsService', () => {
           blockTag: rBlock,
         });
 
+        expect(before.delegatedAmount.eq(after.delegatedAmount)).toBeTruthy();
         expect(reward.own.gt(0)).toBeTruthy();
-        expect(
-          after.reward.sub(before.reward).sub(reward.own).lte(1),
-        ).toBeTruthy();
+
+        expect(after.reward.sub(before.reward).eq(reward.own)).toBeTruthy();
 
         expect(reward.delegators.gt(0)).toBeTruthy();
         expect(
-          after.delegatedAmount
-            .sub(before.delegatedAmount)
-            .sub(reward.delegators)
-            .lte(1),
+          after.delegatorsReward
+            .sub(before.delegatorsReward)
+            .eq(reward.delegators),
         ).toBeTruthy();
       },
       EVENT_PROCESSING_TIMEOUT,
     );
 
     it.each([
+      [117, 16648384],
       [54, 16527522],
       [75, 16625457],
     ])(
