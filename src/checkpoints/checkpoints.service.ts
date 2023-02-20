@@ -1,8 +1,12 @@
 import { getAddress } from '@ethersproject/address';
+import { BigNumber } from '@ethersproject/bignumber';
+import { SimpleFallbackJsonRpcBatchProvider } from '@lido-nestjs/execution';
 import { LOGGER_PROVIDER } from '@lido-nestjs/logger';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { arrayify, keccak256 } from 'ethers/lib/utils';
 import { Between, DataSource } from 'typeorm';
 
+import { ConfigService } from 'common/config';
 import {
   JACK_TOKEN,
   Jack,
@@ -10,22 +14,28 @@ import {
   MAX_DEPOSITS,
   ROOT_CHAIN_TOKEN,
   RootChain,
+  STAKE_MANAGER_TOKEN,
+  StakeManager,
   SubmitCheckpointArgs,
+  ValidatorShare__factory,
 } from 'contracts';
 import { NewHeaderBlockEvent } from 'contracts/generated/RootChain';
-import { Checkpoint, Duty } from 'storage/entities';
+import { Checkpoint, Duty, Reward } from 'storage/entities';
 import { ValidatorsService } from 'validators';
 
+import { REWARD_PRECISION } from './checkpoints.consts';
 import { convertToSignature, getSignerAddress } from './checkpoints.helpers';
 
 @Injectable()
 export class CheckpointsService {
   constructor(
+    @Inject(STAKE_MANAGER_TOKEN) protected readonly stakeManager: StakeManager,
     @Inject(LOGGER_PROVIDER) protected readonly logger: LoggerService,
     @Inject(ROOT_CHAIN_TOKEN) protected readonly rootChain: RootChain,
+    protected readonly provider: SimpleFallbackJsonRpcBatchProvider,
     @Inject(JACK_TOKEN) protected readonly jack: Jack,
-
     protected readonly validators: ValidatorsService,
+    protected readonly configService: ConfigService,
     protected readonly dataSource: DataSource,
   ) {}
 
@@ -38,9 +48,13 @@ export class CheckpointsService {
       data,
     ) as unknown as SubmitCheckpointArgs;
 
+    // look at RootChain.sol:43 for explanation
+    const bytes = [1, ...arrayify(args.data)];
+    const hash = keccak256(bytes);
+
     const signers: string[] = [];
     for (const sig of args.sigs) {
-      const signer = getSignerAddress(args.data, convertToSignature(sig));
+      const signer = getSignerAddress(hash, convertToSignature(sig));
       signers.push(signer);
     }
 
@@ -112,6 +126,10 @@ export class CheckpointsService {
     checkpoint.blockNumber = event.blockNumber;
     checkpoint.blockTimestamp = (await event.getBlock()).timestamp;
     checkpoint.txHash = event.transactionHash;
+    checkpoint.proposer = event.args.proposer;
+    checkpoint.totalReward = event.args.reward;
+    // foreign entities
+    checkpoint.rewards = [];
     checkpoint.duties = [];
 
     const checkpointData = await this.getCheckpointDataFromEvent(event);
@@ -121,18 +139,35 @@ export class CheckpointsService {
       `Found ${signers.length} signatures at checkpoint ${checkpointNumber}`,
     );
 
-    const opts = { blockTag: event.blockNumber };
+    const atCheckpointBlock = { blockTag: event.blockNumber };
+    const epoch = BigNumber.from(checkpoint.number + 1);
 
     const [trackedIds, activeSet] = await Promise.all([
-      this.validators.getTrackedValidatorsIds(opts),
-      this.validators.getValidatorsActiveSet(opts),
+      this.validators.getTrackedValidatorsIds(atCheckpointBlock),
+      this.validators.getValidatorsActiveSet(atCheckpointBlock, epoch),
     ]);
 
-    const commited = await Promise.all(
+    const committed = await Promise.all(
       signers.map((signer) =>
-        this.validators.signerToValidatorId(signer, opts),
+        this.validators.signerToValidatorId(signer, atCheckpointBlock),
       ),
     );
+
+    const stakeOfSigners = activeSet
+      .filter((v) => committed.includes(v.id))
+      .reduce(
+        (t, v) => t.add(v.delegatedAmount).add(v.amount),
+        BigNumber.from(0),
+      );
+
+    const proposerBonus = await this.stakeManager.proposerBonus(
+      atCheckpointBlock,
+    );
+    const proposerReward = checkpoint.totalReward.mul(proposerBonus).div(100);
+    const rewardPerStake = checkpoint.totalReward
+      .sub(proposerReward)
+      .mul(REWARD_PRECISION)
+      .div(stakeOfSigners);
 
     // I believe there should be `cmp` method on BigNumber, but it lacks;
     // sort in descending order
@@ -153,13 +188,73 @@ export class CheckpointsService {
       const duty = new Duty();
 
       duty.checkpoint = checkpoint;
-      duty.fulfilled = commited.includes(v.id);
+      duty.fulfilled = committed.includes(v.id);
       duty.vId = v.id;
       duty.moniker = this.validators.getMoniker(v.id);
       duty.blockTimestamp = checkpoint.blockTimestamp;
       duty.isTracked = trackedIds.includes(v.id);
       duty.isTop = top10ids.includes(v.id);
+      duty.isProposer = v.signer === checkpoint.proposer;
 
+      const rew = new Reward();
+
+      rew.vId = v.id;
+      rew.checkpoint = checkpoint;
+      rew.own = BigNumber.from(0);
+      rew.delegators = BigNumber.from(0);
+      rew.earned = BigNumber.from(0); // by monitored delegators only
+      rew.blockTimestamp = checkpoint.blockTimestamp;
+      rew.moniker = this.validators.getMoniker(v.id);
+
+      if (duty.fulfilled) {
+        if (duty.isProposer) {
+          rew.own = rew.own.add(proposerReward);
+        }
+
+        const totalStake = v.amount.add(v.delegatedAmount);
+        const rewardsOnTotalStake = totalStake
+          .mul(rewardPerStake)
+          .div(REWARD_PRECISION);
+        const rewardsOnOwnStake = rewardsOnTotalStake
+          .mul(v.amount)
+          .div(totalStake);
+        const commissionedRewards = rewardsOnTotalStake
+          .sub(rewardsOnOwnStake)
+          .mul(v.commissionRate)
+          .div(100);
+
+        rew.delegators = rew.delegators.add(
+          rewardsOnTotalStake.sub(rewardsOnOwnStake.add(commissionedRewards)),
+        );
+        rew.own = rew.own.add(rewardsOnOwnStake.add(commissionedRewards));
+
+        const delegators = this.configService.get('DELEGATORS');
+        if (delegators?.length) {
+          const erc20like = ValidatorShare__factory.connect(
+            v.contractAddress,
+            this.provider,
+          );
+
+          let delegatorsShares = BigNumber.from(0);
+          for (const d of delegators) {
+            delegatorsShares = delegatorsShares.add(
+              await erc20like.balanceOf(d, atCheckpointBlock),
+            );
+          }
+
+          if (delegatorsShares.gt(0)) {
+            const totalShares = await erc20like.totalSupply(atCheckpointBlock);
+            const rewardPerShare = rew.delegators
+              .mul(REWARD_PRECISION)
+              .div(totalShares);
+            rew.earned = delegatorsShares
+              .mul(rewardPerShare)
+              .div(REWARD_PRECISION);
+          }
+        }
+      }
+
+      checkpoint.rewards.push(rew);
       checkpoint.duties.push(duty);
     }
 
@@ -169,7 +264,7 @@ export class CheckpointsService {
   }
 
   /**
-   * Save the checkpoint and related entities to the storage
+   * Save the checkpoint and related entities to the storage in one transaction
    */
   public async storeCheckpoint(checkpoint: Checkpoint): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -179,6 +274,7 @@ export class CheckpointsService {
     try {
       await queryRunner.manager.save(checkpoint);
       await queryRunner.manager.save(checkpoint.duties);
+      await queryRunner.manager.save(checkpoint.rewards);
 
       await queryRunner.commitTransaction();
     } catch (err) {

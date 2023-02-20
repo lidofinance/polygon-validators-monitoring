@@ -793,7 +793,7 @@
               }
             ]
           },
-          "unit": "dthms"
+          "unit": "dtdhms"
         },
         "overrides": [
           {
@@ -1685,7 +1685,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 18,
+        "w": 9,
         "x": 0,
         "y": 28
       },
@@ -1773,6 +1773,151 @@
         }
       ],
       "title": "Stake events in MATIC",
+      "transformations": [],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "LOn97bynk"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 50,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyBTC"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 9,
+        "x": 9,
+        "y": 28
+      },
+      "id": 23,
+      "maxDataPoints": 30,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "sortBy": "Total",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.4.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "LOn97bynk"
+          },
+          "format": "time_series",
+          "group": [
+            {
+              "params": [
+                "$__interval",
+                "none"
+              ],
+              "type": "time"
+            }
+          ],
+          "hide": false,
+          "metricColumn": "moniker",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__unixEpochGroupAlias(\"blockTimestamp\",$__interval),\n  moniker AS metric,\n  sum(amount) AS \"amount\"\nFROM share_events\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") and\n  \"type\" = 'Burned'\nGROUP BY 1,2\nORDER BY 1,2",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "amount"
+                ],
+                "type": "column"
+              },
+              {
+                "params": [
+                  "sum"
+                ],
+                "type": "aggregate"
+              },
+              {
+                "params": [
+                  "amount"
+                ],
+                "type": "alias"
+              }
+            ]
+          ],
+          "table": "share_events",
+          "timeColumn": "\"blockTimestamp\"",
+          "timeColumnType": "int8",
+          "where": [
+            {
+              "name": "$__unixEpochFilter",
+              "params": [],
+              "type": "macro"
+            },
+            {
+              "datatype": "share_events_type_enum",
+              "name": "",
+              "params": [
+                "type",
+                "=",
+                "0"
+              ],
+              "type": "expression"
+            }
+          ]
+        }
+      ],
+      "title": "Unstake events in MATIC",
       "transformations": [],
       "type": "timeseries"
     },
@@ -1918,7 +2063,34 @@
           },
           "unit": "currencyBTC"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    10,
+                    10
+                  ],
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -1926,7 +2098,7 @@
         "x": 0,
         "y": 36
       },
-      "id": 23,
+      "id": 25,
       "maxDataPoints": 30,
       "options": {
         "legend": {
@@ -1963,7 +2135,7 @@
           "hide": false,
           "metricColumn": "moniker",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__unixEpochGroupAlias(\"blockTimestamp\",$__interval),\n  moniker AS metric,\n  sum(amount) AS \"amount\"\nFROM share_events\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\") and\n  \"type\" = 'Burned'\nGROUP BY 1,2\nORDER BY 1,2",
+          "rawSql": "SELECT\n  $__unixEpochGroupAlias(\"blockTimestamp\",$__interval),\n  moniker AS metric,\n  sum(earned) / 10^18 AS amount\nFROM rewards\nWHERE\n  $__unixEpochFilter(\"blockTimestamp\")\nGROUP BY 1,2\nHAVING\n  sum(earned) > 0\nORDER BY 1,2\n",
           "refId": "A",
           "select": [
             [
@@ -2009,7 +2181,7 @@
           ]
         }
       ],
-      "title": "Unstake events in MATIC",
+      "title": "Earned in MATIC",
       "transformations": [],
       "type": "timeseries"
     }

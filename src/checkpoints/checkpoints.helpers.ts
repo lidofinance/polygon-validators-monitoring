@@ -1,11 +1,5 @@
 import { BigNumber } from '@ethersproject/bignumber';
-import {
-  BytesLike,
-  SignatureLike,
-  arrayify,
-  hexlify,
-} from '@ethersproject/bytes';
-import { keccak256 } from '@ethersproject/keccak256';
+import { BytesLike, SignatureLike, hexlify } from '@ethersproject/bytes';
 import { recoverAddress } from '@ethersproject/transactions';
 
 /**
@@ -27,11 +21,7 @@ export function convertToSignature(
  * @throws {Error}
  */
 export function getSignerAddress(msg: BytesLike, sig: SignatureLike): string {
-  // look at RootChain.sol:43 for explanation
-  const bytes = [1, ...arrayify(msg)];
-  const msg_hash = keccak256(bytes);
-
-  const signer = recoverAddress(msg_hash, sig);
+  const signer = recoverAddress(msg, sig);
   if (!signer) {
     throw new Error(`Unable to recover signer from ${msg}, ${sig}`);
   }
