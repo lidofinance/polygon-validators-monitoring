@@ -20,7 +20,6 @@ import { Checkpoint, Duty, Metric, ShareEvent } from 'storage/entities';
 import { ValidatorsService } from 'validators';
 
 import {
-  BLOCK_HANDLE_CHUNK,
   CHECKPOINTS_TO_KEEP,
   DRY_RUN_WINDOW,
   MAIN_JOB_NAME,
@@ -119,7 +118,7 @@ export class WorkerService implements OnModuleInit {
 
       while (rangeStart < latestBlock.number) {
         const rangeStop = Math.min(
-          rangeStart + BLOCK_HANDLE_CHUNK,
+          rangeStart + this.configService.get('BLOCK_HANDLE_CHUNK'),
           latestBlock.number,
         );
 

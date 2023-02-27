@@ -57,6 +57,11 @@ export class EnvironmentVariables {
   START_BLOCK!: number;
 
   @IsOptional()
+  @IsNumber()
+  @Transform(toNumber({ defaultValue: 10_000 }))
+  BLOCK_HANDLE_CHUNK!: number;
+
+  @IsOptional()
   @IsString()
   SENTRY_DSN: string | null = null;
 

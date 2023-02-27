@@ -24,6 +24,7 @@ services:
       - DELEGATORS
       - CHAIN_ID
       - START_BLOCK
+      - BLOCK_HANDLE_CHUNK
       - DRY_RUN
     ports:
       - ${PORT}:${PORT}
