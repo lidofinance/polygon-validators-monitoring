@@ -278,7 +278,7 @@ export class CheckpointsService {
 
       await queryRunner.commitTransaction();
     } catch (err) {
-      this.logger.warn('Unable to store checkpoint');
+      this.logger.error(`Failed to store checkpoint ${checkpoint.number}`);
       this.logger.error(err);
 
       await queryRunner.rollbackTransaction();
