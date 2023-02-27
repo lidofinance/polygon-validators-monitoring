@@ -20,14 +20,11 @@ import { Checkpoint, Duty, Metric, ShareEvent } from 'storage/entities';
 import { ValidatorsService } from 'validators';
 
 import {
-  BLOCK_HANDLE_CHUNK,
   CHECKPOINTS_TO_KEEP,
   DRY_RUN_WINDOW,
   MAIN_JOB_NAME,
-  MAX_EXPECTED_BLOCK_FREQUENCY_SECONDS,
   METRICS_COMPUTE_BATCH_SIZE,
   METRICS_RETENTION_JOB_NAME,
-  SECS_PER_BLOCK,
   STAKE_EVENTS_JOB_NAME,
   STALE_CHECKPOINT_THRESHOLD,
 } from './worker.consts';
@@ -119,7 +116,7 @@ export class WorkerService implements OnModuleInit {
 
       while (rangeStart < latestBlock.number) {
         const rangeStop = Math.min(
-          rangeStart + BLOCK_HANDLE_CHUNK,
+          rangeStart + this.configService.get('BLOCK_HANDLE_CHUNK'),
           latestBlock.number,
         );
 
@@ -326,19 +323,6 @@ export class WorkerService implements OnModuleInit {
     }
 
     this.logger.log('Monikers updated');
-  }
-
-  /**
-   * Check if the given block number is stale
-   * relative to the fetched latest one
-   */
-  private isStaleBlock(blockNumber: number): boolean {
-    if (!this.latestBlockNumber) return false;
-
-    return (
-      this.latestBlockNumber - blockNumber * SECS_PER_BLOCK >
-      MAX_EXPECTED_BLOCK_FREQUENCY_SECONDS
-    );
   }
 
   /**
