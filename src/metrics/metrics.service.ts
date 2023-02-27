@@ -130,10 +130,11 @@ export class MetricsService {
    * Return median value multiplier as defined in PIP-4
    */
   private getPerformanceMultiple(checkpointNum: number): number {
-    if (checkpointNum < 42_943) {
-      return 0.95;
-    }
-    return 0.98;
+    // Bump is postponed, no estimate at the moment
+    // if (checkpointNum > 42_943) {
+    //   return 0.98;
+    // }
+    return 0.95;
   }
 
   public async getCheckpointsNumbersToProcess(
