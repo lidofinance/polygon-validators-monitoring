@@ -1,4 +1,3 @@
-export const MAX_EXPECTED_BLOCK_FREQUENCY_SECONDS = 120;
 export const SECS_PER_BLOCK = 12; // PoS
 export const DRY_RUN_WINDOW = Math.floor((3 * 3600) / SECS_PER_BLOCK);
 export const CHECKPOINTS_TO_KEEP = 100;
