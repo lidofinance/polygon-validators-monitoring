@@ -14,19 +14,16 @@ export class CheckpointsHealthIndicator extends HealthIndicator {
   }
 
   async isHealthy(key: string): Promise<HealthIndicatorResult> {
-    const [first, last] = await Promise.all([
-      this.checkpoints.getOneInOrder('asc'),
-      this.checkpoints.getOneInOrder('desc'),
+    const [min, max] = await Promise.all([
+      this.checkpoints.minCheckpointNumber(),
+      this.checkpoints.maxCheckpointNumber(),
     ]);
 
-    if (first === null || last === null || first === last) {
+    if (min === undefined || max === undefined) {
       return this.getStatus(key, true);
     }
 
-    const seq = await this.checkpoints.getMissingCheckpointsNumbers(
-      first.number,
-      last.number,
-    );
+    const seq = await this.checkpoints.getMissingCheckpointsNumbers(min, max);
 
     if (seq.length === 0) {
       return this.getStatus(key, true);

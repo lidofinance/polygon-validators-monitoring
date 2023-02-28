@@ -407,13 +407,24 @@ export class WorkerService implements OnModuleInit {
     const checkpointNumber =
       this.checkpoints.getCheckpointNumberFromEvent(event);
 
-    const dbCheckpoint = await this.checkpoints.getCheckpointByNumber(
+    const wasIndexed = await this.checkpoints.checkpointExists(
       checkpointNumber,
     );
-    if (dbCheckpoint) {
+
+    if (wasIndexed) {
       this.logger.debug(
         `Skipping checkpoint ${checkpointNumber}, it is already processed`,
       );
+
+      const dbCheckpoint = await this.checkpoints.getCheckpointByNumber(
+        checkpointNumber,
+      );
+
+      if (!dbCheckpoint) {
+        throw new Error(
+          `Checkpoint ${checkpointNumber} exists in the database but cannot be retrieved`,
+        );
+      }
 
       return dbCheckpoint;
     }
