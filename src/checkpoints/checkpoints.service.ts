@@ -289,6 +289,17 @@ export class CheckpointsService {
   }
 
   /**
+   * Check if the checkpoint exists
+   */
+  public async checkpointExists(checkpointNumber: number): Promise<boolean> {
+    return this.dataSource.manager.exists(Checkpoint, {
+      where: {
+        number: checkpointNumber,
+      },
+    });
+  }
+
+  /**
    * Retrieve a checkpoint by the given number
    */
   public async getCheckpointByNumber(
@@ -310,31 +321,6 @@ export class CheckpointsService {
   }
 
   /**
-   * Get the last checkpoint
-   */
-  public async getLastCheckpoint(): Promise<Checkpoint | null> {
-    return this.getOneInOrder('desc');
-  }
-
-  /**
-   * Get the one checkpoint from the selected end (last / first)
-   */
-  public async getOneInOrder(
-    direction: 'asc' | 'desc',
-  ): Promise<Checkpoint | null> {
-    const entries = await this.dataSource.manager.find(Checkpoint, {
-      order: {
-        blockTimestamp: {
-          direction,
-        },
-      },
-      take: 1,
-    });
-
-    return entries.pop() ?? null;
-  }
-
-  /**
    * Get missing checkpoints numbers
    */
   public async getMissingCheckpointsNumbers(
@@ -351,6 +337,30 @@ export class CheckpointsService {
   }
 
   /**
+   * Get the lowest checkpoint number in the database
+   */
+  public async minCheckpointNumber(): Promise<number | undefined> {
+    const { min } = await this.dataSource
+      .createQueryBuilder(Checkpoint, 'c')
+      .select('min(number) as min')
+      .getRawOne();
+
+    return min;
+  }
+
+  /**
+   * Get the highest checkpoint number in the database
+   */
+  public async maxCheckpointNumber(): Promise<number | undefined> {
+    const { max } = await this.dataSource
+      .createQueryBuilder(Checkpoint, 'c')
+      .select('max(number) as max')
+      .getRawOne();
+
+    return max;
+  }
+
+  /**
    * Get the highest checkpoint number in the sequence without gaps
    *
    * 1,2,3,5,6 => 3
@@ -359,22 +369,19 @@ export class CheckpointsService {
   public async getTheHighestSequentialCheckpointNumber(): Promise<
     number | undefined
   > {
-    const [first, last] = await Promise.all([
-      this.getOneInOrder('asc'),
-      this.getOneInOrder('desc'),
+    const [min, max] = await Promise.all([
+      this.minCheckpointNumber(),
+      this.maxCheckpointNumber(),
     ]);
 
-    if (first === null || last === null) {
+    if (!min || !max) {
       return;
     }
 
-    const seq = await this.getMissingCheckpointsNumbers(
-      first.number,
-      last.number,
-    );
+    const seq = await this.getMissingCheckpointsNumbers(min, max);
 
     if (!seq.length) {
-      return last.number;
+      return max;
     }
 
     return seq.at(0) - 1;
