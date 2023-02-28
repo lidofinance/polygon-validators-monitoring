@@ -1,3 +1,24 @@
+# [0.6.0](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.5.0...0.6.0) (2023-02-28)
+
+
+### Bug Fixes
+
+* enable Type ORM logging on LOG_LEVEL=debug ([0b1077c](https://github.com/lidofinance/polygon-validators-monitoring/commit/0b1077c5f088b2da8749c60c62d98bf4b0604b3a))
+* postpone PB bump ([a8eb420](https://github.com/lidofinance/polygon-validators-monitoring/commit/a8eb420f4f1ac5fb60f84d544d5c9a153739a61f))
+
+
+### Features
+
+* add rewards calculation ([#33](https://github.com/lidofinance/polygon-validators-monitoring/issues/33)) ([0c03e45](https://github.com/lidofinance/polygon-validators-monitoring/commit/0c03e455473c7a411cdfc3efc53ce50ba4526fae))
+* make block handle chunk configurable ([8280507](https://github.com/lidofinance/polygon-validators-monitoring/commit/82805074b66f48b7a47a520d9eeada3c5b6ce88a))
+
+
+### Performance Improvements
+
+* replace TypeORM ordered queries with min/max and exists checks ([#40](https://github.com/lidofinance/polygon-validators-monitoring/issues/40)) ([3b37193](https://github.com/lidofinance/polygon-validators-monitoring/commit/3b37193331cdf926ba5b2432261724cd2408a186))
+
+
+
 # [0.5.0](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.4.0...0.5.0) (2023-02-03)
 
 
