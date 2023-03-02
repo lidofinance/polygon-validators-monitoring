@@ -27,7 +27,9 @@
     "migration:rev": "yarn typeorm migration:revert -d src/storage/cli.config.ts",
     "schema:drop": "yarn typeorm schema:drop -d src/storage/cli.config.ts",
     "schema:sync": "yarn typeorm schema:sync -d src/storage/cli.config.ts",
-    "schema:fresh": "yarn schema:drop && yarn schema:sync"
+    "schema:fresh": "yarn schema:drop && yarn schema:sync",
+    "console:dev": "ts-node -r tsconfig-paths/register src/console.ts",
+    "console": "node dist/src/console.js"
   },
   "dependencies": {
     "@ethersproject/bignumber": "^5.6.2",
@@ -57,6 +59,7 @@
     "class-validator": "^0.14.0",
     "ethers": "^5.6.9",
     "fastify-swagger": "^4.13.1",
+    "nestjs-console": "^8.0.0",
     "pg": "^8.7.3",
     "prom-client": "^14.0.1",
     "reflect-metadata": "^0.1.13",
