@@ -1,6 +1,4 @@
 {
-  "1": "Matic Foundation Node 1",
-  "4": "Matic Foundation Node 4",
   "8": "Torus Validator",
   "9": "Infosys",
   "10": "Chain Guardians",
@@ -43,9 +41,9 @@
   "73": "Vader73 - 0% commission for life",
   "75": "kytzu",
   "76": "Making.cash | Long term fee 0%",
-  "77": "Everstake",
+  "77": "Everstake 0% fee",
   "79": "Matrix Stake",
-  "82": "MillenniumClub",
+  "82": "MCLB & fBOMB",
   "85": "Coinstash",
   "86": "DeFiMatic",
   "87": "Figment",
@@ -91,8 +89,10 @@
   "141": "Republic Crypto / Source",
   "142": "Coinbase Cloud",
   "143": "Blockdaemon",
-  "144": "Penguin Finance",
+  "144": "Data Nexus",
   "145": "a41",
   "146": "Streamr",
-  "147": "PolygonGo"
+  "147": "PolygonGo",
+  "148": "Twinstake",
+  "149": "stake.new"
 }
