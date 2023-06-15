@@ -11,7 +11,7 @@ import { DataSource } from 'typeorm';
 
 import { CheckpointsService } from 'checkpoints';
 import { ConfigService } from 'common/config';
-import { takeWhile } from 'common/helpers';
+import { Memoize, takeWhile } from 'common/helpers';
 import { allSettled } from 'common/helpers/promises';
 import { PrometheusService, TrackTask } from 'common/prometheus';
 import { MetricRegistry } from 'common/prometheus/interfaces';
@@ -135,6 +135,14 @@ export class WorkerService implements OnModuleInit {
 
       const metricsHead = await this.computeMetrics();
       await this.exposeUnderPerfStrike(metricsHead);
+
+      const lastSeqCheckpoint =
+        await this.checkpoints.getTheHighestSequentialCheckpoint();
+      // Limit the number of concurrent function calls because of the heavy load of the objects from the database:
+      // count of active validators _times_ count of checkpoints in the sequence for the every call
+      await this.heavyPromiseLimiter(() =>
+        this.exposeCheckpointMissesInRow(lastSeqCheckpoint),
+      );
 
       this.logger.log("End block's fetch cycle");
     } catch (error) {
@@ -438,11 +446,6 @@ export class WorkerService implements OnModuleInit {
 
     if (!this.isStaleCheckpoint(checkpoint)) {
       this.exposeCheckpointMisses(checkpoint);
-      // Limit the number of concurrent function calls because of the heavy load of the objects from the database:
-      // count of active validators _times_ count of checkpoints in the sequence for the every call
-      await this.heavyPromiseLimiter(() =>
-        this.exposeCheckpointMissesInRow(checkpoint),
-      );
     } else {
       this.logger.warn('Skipping stale checkpoint metrics update');
     }
@@ -507,21 +510,30 @@ export class WorkerService implements OnModuleInit {
     }
   }
 
+  @Memoize((c: Checkpoint) => c.number.toString())
   private async exposeCheckpointMissesInRow(
     checkpoint: Checkpoint,
   ): Promise<void> {
-    const lastSeqCheckpoint =
-      await this.checkpoints.getTheHighestSequentialCheckpointNumber();
-    if (!lastSeqCheckpoint || checkpoint.number !== lastSeqCheckpoint) {
-      this.logger.debug(
-        `Checkpoint ${checkpoint.number} is not the last sequential checkpoint, unable to calculate misses in row`,
-      );
-      return;
-    }
-
     this.logger.debug(
-      `Calculating misses in row for checkpoint ${checkpoint.number}`,
+      `Calculating misses in a row for checkpoint ${checkpoint.number}`,
     );
+
+    const checkpointsInRow = await this.checkpoints.getCheckpointsRange(
+      checkpoint.number - this.configService.get('CHECKPOINTS_IN_ROW_LIMIT'),
+      checkpoint.number,
+    );
+
+    const valToDuties = checkpointsInRow.reduce((acc, c) => {
+      c.duties.forEach((d) => {
+        if (d.isTracked) {
+          if (!acc[d.vId]) {
+            acc[d.vId] = [];
+          }
+          acc[d.vId].push(d);
+        }
+      });
+      return acc;
+    }, {} as { [key: number]: Duty[] });
 
     const trackedVals = checkpoint.duties
       .filter((d) => d.isTracked)
@@ -532,19 +544,10 @@ export class WorkerService implements OnModuleInit {
         };
       });
 
-    const checkpointsInRow = await this.checkpoints.getCheckpointsRange(
-      checkpoint.number - this.configService.get('CHECKPOINTS_IN_ROW_LIMIT'),
-      checkpoint.number,
-    );
-
     trackedVals.forEach((v) => {
-      const valDuties = checkpointsInRow.map((c) =>
-        c.duties.find((d) => d.vId === v.vId),
-      );
-
       this.prometheus.missedCheckpointsInRow
         .labels(v.vId.toString(), v.moniker)
-        .set(takeRightWhile(valDuties, (d) => d && !d.fulfilled).length);
+        .set(takeRightWhile(valToDuties[v.vId], (d) => !d?.fulfilled).length);
     });
   }
 
