@@ -135,7 +135,7 @@ export class WorkerService implements OnModuleInit {
 
       const lastSeqCheckpoint =
         await this.checkpoints.getTheHighestSequentialCheckpoint();
-      if (lastSeqCheckpoint) {
+      if (lastSeqCheckpoint && !this.isStaleCheckpoint(lastSeqCheckpoint)) {
         await this.exposeCheckpointMissesInRow(lastSeqCheckpoint);
       }
 
