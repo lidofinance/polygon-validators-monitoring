@@ -6,7 +6,6 @@ import { Inject, LoggerService, OnModuleInit } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronCommand, CronJob } from 'cron';
 import { takeRightWhile } from 'lodash';
-import * as pLimit from 'p-limit';
 import { DataSource } from 'typeorm';
 
 import { CheckpointsService } from 'checkpoints';
@@ -46,12 +45,10 @@ export class WorkerService implements OnModuleInit {
   ) {
     this.chainId = this.configService.get('CHAIN_ID');
     this.dryRun = this.configService.get('DRY_RUN');
-    this.heavyPromiseLimiter = pLimit(1);
   }
 
   protected lastBlock: Pick<Block, 'hash' | 'number'> | null = null;
   protected latestBlockNumber?: number = null;
-  protected heavyPromiseLimiter: pLimit.Limit;
   protected chainId: number;
   protected dryRun: boolean;
 
@@ -138,11 +135,9 @@ export class WorkerService implements OnModuleInit {
 
       const lastSeqCheckpoint =
         await this.checkpoints.getTheHighestSequentialCheckpoint();
-      // Limit the number of concurrent function calls because of the heavy load of the objects from the database:
-      // count of active validators _times_ count of checkpoints in the sequence for the every call
-      await this.heavyPromiseLimiter(() =>
-        this.exposeCheckpointMissesInRow(lastSeqCheckpoint),
-      );
+      if (lastSeqCheckpoint) {
+        await this.exposeCheckpointMissesInRow(lastSeqCheckpoint);
+      }
 
       this.logger.log("End block's fetch cycle");
     } catch (error) {
