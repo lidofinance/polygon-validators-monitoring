@@ -12,6 +12,7 @@ services:
       - DB_USER=postgres
       - DB_PASS=postgres
       - DB_NAME=postgres
+      - DB_LOGS
       - SENTRY_DSN
       - EL_API_URLS
       - LOG_FORMAT=simple
