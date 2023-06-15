@@ -10,7 +10,7 @@ import { DataSource } from 'typeorm';
 
 import { CheckpointsService } from 'checkpoints';
 import { ConfigService } from 'common/config';
-import { Memoize, takeWhile } from 'common/helpers';
+import { takeWhile } from 'common/helpers';
 import { allSettled } from 'common/helpers/promises';
 import { PrometheusService, TrackTask } from 'common/prometheus';
 import { MetricRegistry } from 'common/prometheus/interfaces';
@@ -49,6 +49,7 @@ export class WorkerService implements OnModuleInit {
 
   protected lastBlock: Pick<Block, 'hash' | 'number'> | null = null;
   protected latestBlockNumber?: number = null;
+  protected lastMultiMissCheckpointNumber?: number = null;
   protected chainId: number;
   protected dryRun: boolean;
 
@@ -505,10 +506,16 @@ export class WorkerService implements OnModuleInit {
     }
   }
 
-  @Memoize((c: Checkpoint) => c.number.toString())
   private async exposeCheckpointMissesInRow(
     checkpoint: Checkpoint,
   ): Promise<void> {
+    if (
+      this.lastMultiMissCheckpointNumber &&
+      this.lastMultiMissCheckpointNumber >= checkpoint.number
+    ) {
+      return;
+    }
+
     this.logger.debug(
       `Calculating misses in a row for checkpoint ${checkpoint.number}`,
     );
@@ -544,6 +551,8 @@ export class WorkerService implements OnModuleInit {
         .labels(v.vId.toString(), v.moniker)
         .set(takeRightWhile(valToDuties[v.vId], (d) => !d?.fulfilled).length);
     });
+
+    this.lastMultiMissCheckpointNumber = checkpoint.number;
   }
 
   /**
