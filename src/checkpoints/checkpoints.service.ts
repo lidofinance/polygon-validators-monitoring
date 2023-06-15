@@ -309,7 +309,7 @@ export class CheckpointsService {
   }
 
   /**
-   * Retrieve a checkpoints range
+   * Retrieve a checkpoints range (inlcusive) in ascending order
    */
   public async getCheckpointsRange(
     firstNum: number,
@@ -317,6 +317,7 @@ export class CheckpointsService {
   ): Promise<Checkpoint[]> {
     return await this.dataSource.manager.find(Checkpoint, {
       where: { number: Between(firstNum, lastNum) },
+      order: { number: 'ASC' },
     });
   }
 

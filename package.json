@@ -60,6 +60,7 @@
     "ethers": "^5.6.9",
     "fastify-swagger": "^4.13.1",
     "nestjs-console": "^8.0.0",
+    "p-limit": "^3",
     "pg": "^8.7.3",
     "prom-client": "^14.0.1",
     "reflect-metadata": "^0.1.13",

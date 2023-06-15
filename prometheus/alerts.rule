@@ -18,6 +18,46 @@ groups:
             Validator {{ .Labels.moniker }} missed checkpoint {{
             .Labels.checkpoint }}!
 
+      - record: polygon_validators_monitoring_missed_checkpoints:multioperator
+        expr: sum(polygon_validators_monitoring_missed_checkpoints) by (checkpoint) > 1
+
+      - alert: MultiOperatorMissingCheckpoint
+        expr: >-
+          polygon_validators_monitoring_missed_checkpoints:multioperator unless
+          polygon_validators_monitoring_missed_checkpoints:multioperator offset 5m
+        labels:
+          severity: high
+        annotations:
+          summary: >-
+            At least 2 validators missed the checkpoint {{ .Labels.checkpoint }}!
+
+      - record: polygon_validators_monitoring_missed_checkpoints:seq
+        expr: polygon_validators_monitoring_missed_checkpoints_in_row >= 5
+
+      - alert: ConsecutiveMissingCheckpoint
+        expr: >-
+          polygon_validators_monitoring_missed_checkpoints:seq unless
+          polygon_validators_monitoring_missed_checkpoints:seq offset 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: >-
+            Validator {{ .Labels.moniker }} missed {{ .Value }} checkpoints in a row!
+
+      - record: polygon_validators_monitoring_missed_checkpoints:seq:multioperator
+        expr: count(polygon_validators_monitoring_missed_checkpoints_in_row >= 3) >= 2
+
+      - alert: MultiOperatorConsecutiveMissingCheckpoint
+        expr: >-
+          polygon_validators_monitoring_missed_checkpoints:seq:multioperator unless
+          polygon_validators_monitoring_missed_checkpoints:seq:multioperator offset 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: >-
+            {{ .Value }} validators missed more than 3 checkpoints in a row!
+
+
       - record: polygon_validators_monitoring_validator_health:unhealthy
         expr: polygon_validators_monitoring_under_pb_strike > 0
 
@@ -35,7 +75,7 @@ groups:
           summary: Validator {{ .Labels.moniker }} enters Grace Period!
 
       # fake alert with offset to silence the prev one
-      # it's required to keep main alert firing with 
+      # it's required to keep main alert firing with
       # no alerts to get resolve at the end
       - alert: ValidatorEntersGPMute
         expr: polygon_validators_monitoring_validator_health:unhealthy

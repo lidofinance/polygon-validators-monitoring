@@ -66,6 +66,11 @@ export class EnvironmentVariables {
   BLOCK_HANDLE_CHUNK!: number;
 
   @IsOptional()
+  @IsNumber()
+  @Transform(toNumber({ defaultValue: 50 }))
+  CHECKPOINTS_IN_ROW_LIMIT!: number;
+
+  @IsOptional()
   @IsString()
   SENTRY_DSN: string | null = null;
 
