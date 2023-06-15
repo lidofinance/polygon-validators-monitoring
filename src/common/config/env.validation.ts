@@ -52,6 +52,10 @@ export class EnvironmentVariables {
   DB_NAME: string;
 
   @IsOptional()
+  @Transform(({ value }) => Boolean(value))
+  DB_LOGS = false;
+
+  @IsOptional()
   @IsNumber()
   @Transform(toNumber({ defaultValue: 0 }))
   START_BLOCK!: number;
