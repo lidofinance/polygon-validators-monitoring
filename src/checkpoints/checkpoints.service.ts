@@ -387,4 +387,19 @@ export class CheckpointsService {
 
     return seq.at(0) - 1;
   }
+
+  /**
+   * Get the highest checkpoint in the sequence without gaps
+   */
+  public async getTheHighestSequentialCheckpoint(): Promise<
+    Checkpoint | undefined
+  > {
+    const number = await this.getTheHighestSequentialCheckpointNumber();
+
+    if (!number) {
+      return;
+    }
+
+    return await this.getCheckpointByNumber(number);
+  }
 }
