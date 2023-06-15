@@ -68,7 +68,7 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsNumber()
   @Transform(toNumber({ defaultValue: 50 }))
-  CHECKPOINTS_IN_ROW_LIMIT!: number;
+  CHECKPOINTS_IN_ROW_LIMIT = 50;
 
   @IsOptional()
   @IsString()
