@@ -1,3 +1,25 @@
+# [0.7.0](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.6.0...0.7.0) (2023-06-16)
+
+
+### Bug Fixes
+
+* default value for CHECKPOINTS_IN_ROW_LIMIT ([1cecba4](https://github.com/lidofinance/polygon-validators-monitoring/commit/1cecba47172fa8ff4c1312827775fd5adb25bf25))
+* skip staled checkpoint for multiple misses ([0347d59](https://github.com/lidofinance/polygon-validators-monitoring/commit/0347d59d636c53519b68c79791247dfb3304c2f9))
+* use raw query to fetch duties only ([f494e43](https://github.com/lidofinance/polygon-validators-monitoring/commit/f494e43580f5e7d30d82792986cad7781478e738))
+
+
+### Features
+
+* boilerplate for cli commands ([98c7696](https://github.com/lidofinance/polygon-validators-monitoring/commit/98c769663101bd260281ae25d0ef25bc0331dd8b))
+* multiple checkpoints misses in a row ([a779a4c](https://github.com/lidofinance/polygon-validators-monitoring/commit/a779a4cbe76e6ad0427a80740de3fe0794285904))
+
+
+### Performance Improvements
+
+* replace TypeORM ordered queries with min/max and exists checks ([b51fae4](https://github.com/lidofinance/polygon-validators-monitoring/commit/b51fae4ca6c961a2fa86aac03989e7d862c16c6a))
+
+
+
 # [0.6.0](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.5.0...0.6.0) (2023-02-28)
 
 
