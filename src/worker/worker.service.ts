@@ -520,20 +520,23 @@ export class WorkerService implements OnModuleInit {
       `Calculating misses in a row for checkpoint ${checkpoint.number}`,
     );
 
-    const checkpointsInRow = await this.checkpoints.getCheckpointsRange(
-      checkpoint.number - this.configService.get('CHECKPOINTS_IN_ROW_LIMIT'),
-      checkpoint.number,
-    );
+    const duties = await this.dataSource
+      .getRepository(Duty)
+      .createQueryBuilder('duties')
+      .where('"isTracked" = true')
+      .andWhere('"checkpointNumber" >= :from', {
+        from:
+          checkpoint.number -
+          this.configService.get('CHECKPOINTS_IN_ROW_LIMIT'),
+      })
+      .andWhere('"checkpointNumber" <= :to', { to: checkpoint.number })
+      .getMany();
 
-    const valToDuties = checkpointsInRow.reduce((acc, c) => {
-      c.duties.forEach((d) => {
-        if (d.isTracked) {
-          if (!acc[d.vId]) {
-            acc[d.vId] = [];
-          }
-          acc[d.vId].push(d);
-        }
-      });
+    const valToDuties = duties.reduce((acc, d) => {
+      if (!acc[d.vId]) {
+        acc[d.vId] = [];
+      }
+      acc[d.vId].push(d);
       return acc;
     }, {} as { [key: number]: Duty[] });
 
