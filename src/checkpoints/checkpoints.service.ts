@@ -309,7 +309,7 @@ export class CheckpointsService {
   }
 
   /**
-   * Retrieve a checkpoints range
+   * Retrieve a checkpoints range (inlcusive) in ascending order
    */
   public async getCheckpointsRange(
     firstNum: number,
@@ -317,6 +317,7 @@ export class CheckpointsService {
   ): Promise<Checkpoint[]> {
     return await this.dataSource.manager.find(Checkpoint, {
       where: { number: Between(firstNum, lastNum) },
+      order: { number: 'ASC' },
     });
   }
 
@@ -385,5 +386,20 @@ export class CheckpointsService {
     }
 
     return seq.at(0) - 1;
+  }
+
+  /**
+   * Get the highest checkpoint in the sequence without gaps
+   */
+  public async getTheHighestSequentialCheckpoint(): Promise<
+    Checkpoint | undefined
+  > {
+    const number = await this.getTheHighestSequentialCheckpointNumber();
+
+    if (!number) {
+      return;
+    }
+
+    return await this.getCheckpointByNumber(number);
   }
 }

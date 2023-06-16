@@ -5,6 +5,7 @@ import { LOGGER_PROVIDER } from '@lido-nestjs/logger';
 import { Inject, LoggerService, OnModuleInit } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronCommand, CronJob } from 'cron';
+import { takeRightWhile } from 'lodash';
 import { DataSource } from 'typeorm';
 
 import { CheckpointsService } from 'checkpoints';
@@ -48,6 +49,7 @@ export class WorkerService implements OnModuleInit {
 
   protected lastBlock: Pick<Block, 'hash' | 'number'> | null = null;
   protected latestBlockNumber?: number = null;
+  protected lastMultiMissCheckpointNumber?: number = null;
   protected chainId: number;
   protected dryRun: boolean;
 
@@ -131,6 +133,12 @@ export class WorkerService implements OnModuleInit {
 
       const metricsHead = await this.computeMetrics();
       await this.exposeUnderPerfStrike(metricsHead);
+
+      const lastSeqCheckpoint =
+        await this.checkpoints.getTheHighestSequentialCheckpoint();
+      if (lastSeqCheckpoint && !this.isStaleCheckpoint(lastSeqCheckpoint)) {
+        await this.exposeCheckpointMissesInRow(lastSeqCheckpoint);
+      }
 
       this.logger.log("End block's fetch cycle");
     } catch (error) {
@@ -498,6 +506,55 @@ export class WorkerService implements OnModuleInit {
     }
   }
 
+  private async exposeCheckpointMissesInRow(
+    checkpoint: Checkpoint,
+  ): Promise<void> {
+    if (
+      this.lastMultiMissCheckpointNumber &&
+      this.lastMultiMissCheckpointNumber >= checkpoint.number
+    ) {
+      return;
+    }
+
+    this.logger.debug(
+      `Calculating misses in a row for checkpoint ${checkpoint.number}`,
+    );
+
+    const checkpointsInRow = await this.checkpoints.getCheckpointsRange(
+      checkpoint.number - this.configService.get('CHECKPOINTS_IN_ROW_LIMIT'),
+      checkpoint.number,
+    );
+
+    const valToDuties = checkpointsInRow.reduce((acc, c) => {
+      c.duties.forEach((d) => {
+        if (d.isTracked) {
+          if (!acc[d.vId]) {
+            acc[d.vId] = [];
+          }
+          acc[d.vId].push(d);
+        }
+      });
+      return acc;
+    }, {} as { [key: number]: Duty[] });
+
+    const trackedVals = checkpoint.duties
+      .filter((d) => d.isTracked)
+      .map((d) => {
+        return {
+          vId: d.vId,
+          moniker: d.moniker,
+        };
+      });
+
+    trackedVals.forEach((v) => {
+      this.prometheus.missedCheckpointsInRow
+        .labels(v.vId.toString(), v.moniker)
+        .set(takeRightWhile(valToDuties[v.vId], (d) => !d?.fulfilled).length);
+    });
+
+    this.lastMultiMissCheckpointNumber = checkpoint.number;
+  }
+
   /**
    * Expose metric of checkpoints under PB in the row for the given validator
    */
@@ -532,7 +589,9 @@ export class WorkerService implements OnModuleInit {
       MONITORING_PERIOD * 3, // GP1 - 0, GP2, FN, and the upper bound
     );
 
-    const buf = Object.fromEntries(trackedVals.map((o) => [o.vId, []]));
+    const buf: { [key: string]: number[] } = Object.fromEntries(
+      trackedVals.map((o) => [o.vId, []]),
+    );
     for (const metric of values) {
       const vId = metric.labels.vId;
       if (buf[vId] === undefined) {

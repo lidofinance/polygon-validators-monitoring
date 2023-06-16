@@ -36,7 +36,7 @@ import { AppService } from './app.service';
         migrations: ['dist/**/migrations/**/*.js'],
         migrationsRun: true,
         synchronize: false,
-        logging: configService.get('LOG_LEVEL') == 'debug',
+        logging: configService.get('DB_LOGS'),
       }),
     }),
   ],

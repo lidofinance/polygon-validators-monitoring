@@ -30,6 +30,74 @@ tests:
       - eval_time: 25m
         alertname: MissingCheckpoint
 
+  # MultiOperatorMissingCheckpoint
+  - interval: 5m
+    input_series:
+      - series: >-
+          polygon_validators_monitoring_missed_checkpoints{moniker="Panther",
+          vid="42", checkpoint="2"}
+        values: _ 1 1 1 _ _ _
+      - series: >-
+          polygon_validators_monitoring_missed_checkpoints{moniker="Tiger",
+          vid="73", checkpoint="2"}
+        values: _ 1 1 1 _ _ _
+    alert_rule_test:
+      # event should fire
+      - eval_time: 5m
+        alertname: MultiOperatorMissingCheckpoint
+        exp_alerts:
+          - exp_labels:
+              severity: high
+              checkpoint: 2
+            exp_annotations:
+              summary: At least 2 validators missed the checkpoint 2!
+      # should stop
+      - eval_time: 25m
+        alertname: MissingCheckpoint
+
+  # ConsecutiveMissingCheckpoint
+  - interval: 5m
+    input_series:
+      - series: >-
+          polygon_validators_monitoring_missed_checkpoints_in_row{moniker="Panther", vid="42"}
+        values: _ 5x10
+    alert_rule_test:
+      # event should fire
+      - eval_time: 5m
+        alertname: ConsecutiveMissingCheckpoint
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              moniker: Panther
+              vid: 42
+            exp_annotations:
+              summary: Validator Panther missed 5 checkpoints in a row!
+      # should stop
+      - eval_time: 25m
+        alertname: ConsecutiveMissingCheckpoint
+
+  # MultiOperatorConsecutiveMissingCheckpoint
+  - interval: 5m
+    input_series:
+      - series: >-
+          polygon_validators_monitoring_missed_checkpoints_in_row{moniker="Panther", vid="42"}
+        values: _ 5x10
+      - series: >-
+          polygon_validators_monitoring_missed_checkpoints_in_row{moniker="Tiger", vid="73"}
+        values: _ 3x10
+    alert_rule_test:
+      # event should fire
+      - eval_time: 5m
+        alertname: MultiOperatorConsecutiveMissingCheckpoint
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: 2 validators missed more than 3 checkpoints in a row!
+      # should stop
+      - eval_time: 25m
+        alertname: MultiOperatorConsecutiveMissingCheckpoint
+
   # ValidatorInGP
   - interval: 5m
     input_series:

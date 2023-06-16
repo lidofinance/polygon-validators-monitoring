@@ -52,6 +52,10 @@ export class EnvironmentVariables {
   DB_NAME: string;
 
   @IsOptional()
+  @Transform(({ value }) => Boolean(value))
+  DB_LOGS = false;
+
+  @IsOptional()
   @IsNumber()
   @Transform(toNumber({ defaultValue: 0 }))
   START_BLOCK!: number;
@@ -60,6 +64,11 @@ export class EnvironmentVariables {
   @IsNumber()
   @Transform(toNumber({ defaultValue: 10_000 }))
   BLOCK_HANDLE_CHUNK!: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Transform(toNumber({ defaultValue: 50 }))
+  CHECKPOINTS_IN_ROW_LIMIT = 50;
 
   @IsOptional()
   @IsString()

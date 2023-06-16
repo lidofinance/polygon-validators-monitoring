@@ -53,6 +53,12 @@ export class PrometheusService {
     labelNames: ['vid', 'moniker', 'checkpoint'],
   });
 
+  public missedCheckpointsInRow = this.getOrCreateMetric('Gauge', {
+    name: 'missed_checkpoints_in_row',
+    help: 'Consecutive missed checkpoints count by validator',
+    labelNames: ['vid', 'moniker'],
+  });
+
   public tasksDuration = this.getOrCreateMetric('Histogram', {
     name: 'tasks_durations_seconds',
     help: 'Tasks duration',

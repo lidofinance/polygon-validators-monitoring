@@ -21,7 +21,7 @@ jobs:
 
       - name: Fetch monikers
         run: >-
-          curl -sS https://sentinel.matic.network/api/v2/validators\?limit\=0\&sortBy\=id |
+          curl -sS https://staking-api.polygon.technology/api/v2/validators\?limit\=0\&sortBy\=id |
           jq '.result | reduce .[] as $item ({}; . + { ($item.id | tostring): ($item.name |
           gsub("^\\s+|\\s+$|[^\\x00-\\x7F]+";"")) }) | with_entries(select(.value != ""))'
           > monikers.json

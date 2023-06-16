@@ -27,12 +27,14 @@ function toInt(num: number): number {
   return num | 0;
 }
 
-// TODO: type for predicate p
-export function takeWhile(iterable: Iterable<any>, p: any): any[] {
+export function takeWhile<T>(
+  iterable: Iterable<T>,
+  predicate: (value: T) => boolean,
+): T[] {
   const c = [];
 
   for (const i of iterable) {
-    if (p(i)) {
+    if (predicate(i)) {
       c.push(i);
       continue;
     }
