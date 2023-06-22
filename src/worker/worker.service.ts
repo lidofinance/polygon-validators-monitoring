@@ -130,14 +130,22 @@ export class WorkerService implements OnModuleInit {
 
       // metric's fast-forwarding to the latest block
       await this.updateLastBlock(this.latestBlockNumber);
-
-      const metricsHead = await this.computeMetrics();
-      await this.exposeUnderPerfStrike(metricsHead);
+      await this.computeMetrics();
 
       const lastSeqCheckpoint =
         await this.checkpoints.getTheHighestSequentialCheckpoint();
-      if (lastSeqCheckpoint && !this.isStaleCheckpoint(lastSeqCheckpoint)) {
-        await this.exposeCheckpointMissesInRow(lastSeqCheckpoint);
+      if (lastSeqCheckpoint) {
+        if (this.isStaleCheckpoint(lastSeqCheckpoint)) {
+          this.logger.warn(
+            `Last sequential checkpoint ${lastSeqCheckpoint.number} is stale and ` +
+              `will be skipped for metrics computation`,
+          );
+        } else {
+          await allSettled([
+            this.exposeUnderPerfStrike(lastSeqCheckpoint),
+            this.exposeCheckpointMissesInRow(lastSeqCheckpoint),
+          ]);
+        }
       }
 
       this.logger.log("End block's fetch cycle");
@@ -254,11 +262,15 @@ export class WorkerService implements OnModuleInit {
     }
   }
 
-  private async computeMetrics(): Promise<number> {
-    this.logger.log('Staring metrics computation');
+  private async computeMetrics(): Promise<void> {
+    this.logger.log('Starting metrics computation');
 
     const eCheckpointNum =
       await this.checkpoints.getTheHighestSequentialCheckpointNumber();
+
+    if (!eCheckpointNum) {
+      return;
+    }
 
     let nums = []; // checkpoints numbers to process
 
@@ -281,8 +293,6 @@ export class WorkerService implements OnModuleInit {
     this.logger.log(
       `Metrics computation complete, metrics head: ${eCheckpointNum}`,
     );
-
-    return eCheckpointNum;
   }
 
   @OneAtTime()
@@ -516,7 +526,7 @@ export class WorkerService implements OnModuleInit {
       return;
     }
 
-    this.logger.debug(
+    this.logger.log(
       `Calculating misses in a row for checkpoint ${checkpoint.number}`,
     );
 
@@ -524,7 +534,7 @@ export class WorkerService implements OnModuleInit {
       .getRepository(Duty)
       .createQueryBuilder('duties')
       .where('"isTracked" = true')
-      .andWhere('"checkpointNumber" >= :from', {
+      .andWhere('"checkpointNumber" > :from', {
         from:
           checkpoint.number -
           this.configService.get('CHECKPOINTS_IN_ROW_LIMIT'),
@@ -561,23 +571,7 @@ export class WorkerService implements OnModuleInit {
   /**
    * Expose metric of checkpoints under PB in the row for the given validator
    */
-  private async exposeUnderPerfStrike(checkpointNum: number): Promise<void> {
-    const checkpoint = await this.checkpoints.getCheckpointByNumber(
-      checkpointNum,
-    );
-
-    if (!checkpoint) {
-      this.logger.warn(`Checkpoint ${checkpointNum} at metrics head not found`);
-      return;
-    }
-
-    if (this.isStaleCheckpoint(checkpoint)) {
-      this.logger.debug(
-        `Stale checkpoint ${checkpoint.number} to expose miss strike`,
-      );
-      return;
-    }
-
+  private async exposeUnderPerfStrike(checkpoint: Checkpoint): Promise<void> {
     const trackedVals = checkpoint.duties
       .filter((d) => d.isTracked)
       .map((d) => {
