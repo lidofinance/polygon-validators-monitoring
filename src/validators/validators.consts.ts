@@ -7,7 +7,7 @@ export enum Status {
   Unstaked,
 }
 
-export const ACTIVE_SET_SIZE = 100;
+export const ACTIVE_SET_LIMIT = 105;
 
 export const POLIDO_V2_BLOCK = {
   [CHAINS.Mainnet]: 16525714,
