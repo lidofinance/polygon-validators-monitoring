@@ -18,7 +18,7 @@ import {
 } from 'contracts';
 import { NewHeaderBlockEvent } from 'contracts/generated/RootChain';
 import { Checkpoint } from 'storage/entities';
-import { ACTIVE_SET_SIZE, ValidatorsModule } from 'validators';
+import { ACTIVE_SET_LIMIT, ValidatorsModule } from 'validators';
 import { DRY_RUN_WINDOW } from 'worker';
 
 const stMATIC = '0x9ee91F9f426fA633d227f7a9b000E28b9dfd8599';
@@ -98,7 +98,7 @@ describe('CheckpointsService', () => {
     event: NewHeaderBlockEvent,
   ): Promise<Checkpoint> {
     const checkpoint = await checkpointsService.processCheckpointEvent(event);
-    expect(checkpoint.duties.length).toEqual(ACTIVE_SET_SIZE);
+    expect(checkpoint.duties.length).toBeLessThanOrEqual(ACTIVE_SET_LIMIT);
     const duties = checkpoint.duties.filter((d) => d.isTracked);
     expect(duties.length).toBeGreaterThan(0);
     return checkpoint;
