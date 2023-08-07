@@ -1,3 +1,12 @@
+## [0.7.1](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.7.0...0.7.1) (2023-08-07)
+
+
+### Bug Fixes
+
+* active set site increased to 105 by PIP4 ([b920de5](https://github.com/lidofinance/polygon-validators-monitoring/commit/b920de5b4f2a2f8282b59364724c093435905221))
+
+
+
 # [0.7.0](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.6.0...0.7.0) (2023-06-16)
 
 
