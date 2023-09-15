@@ -540,6 +540,7 @@ export class WorkerService implements OnModuleInit {
           this.configService.get('CHECKPOINTS_IN_ROW_LIMIT'),
       })
       .andWhere('"checkpointNumber" <= :to', { to: checkpoint.number })
+      .orderBy('"checkpointNumber"', 'ASC')
       .getMany();
 
     const valToDuties = duties.reduce((acc, d) => {
