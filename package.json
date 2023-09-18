@@ -1,6 +1,6 @@
 {
   "name": "polygon-validators-monitoring",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Polygon validators monitoring",
   "author": "Lido automation team",
   "private": true,

@@ -1,3 +1,12 @@
+## [0.7.2](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.7.1...0.7.2) (2023-09-18)
+
+
+### Bug Fixes
+
+* **worker:** require sorting duties ([ca89fce](https://github.com/lidofinance/polygon-validators-monitoring/commit/ca89fce4f1df669a21b34fc2e9c6e0a881bd3bba))
+
+
+
 ## [0.7.1](https://github.com/lidofinance/polygon-validators-monitoring/compare/0.7.0...0.7.1) (2023-08-07)
 
 
