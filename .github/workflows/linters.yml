@@ -8,15 +8,6 @@ on:
       - '*'
 
 jobs:
-  security:
-    uses: lidofinance/linters/.github/workflows/security.yml@master
-    permissions:
-      security-events: write
-      contents: read
-  docker:
-    uses: lidofinance/linters/.github/workflows/docker.yml@master
-  actions:
-    uses: lidofinance/linters/.github/workflows/actions.yml@master
   js:
     runs-on: ubuntu-latest
 
