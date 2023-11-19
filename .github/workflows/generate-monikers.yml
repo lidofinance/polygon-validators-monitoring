@@ -27,7 +27,7 @@ jobs:
           > monikers.json
 
       - name: Create PR
-        uses: peter-evans/create-pull-request@v4
+        uses: lidofinance/create-pull-request@v4
         with:
           author: GitHub <noreply@github.com>
           commit-message: 'chore: update monikers.json'
