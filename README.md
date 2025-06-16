@@ -1,3 +1,6 @@
+> [!WARNING]
+> ***THIS PROJECT IS NOT SUPPORTED ANYMORE!***
+
 ## Polygon validators monitoring
 
 The bot aimed to keep track of the validators performance.
